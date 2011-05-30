@@ -51,13 +51,17 @@ class ScribberView(gtk.Window):
         self.connect("destroy", self.destroy)
         self.connect("window-state-event", self.on_window_state_event)
 
+        scrolled_window = gtk.ScrolledWindow()
+        scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+
         vbox = gtk.VBox(False, 0)
         self.add(vbox)
 
         # TextView
-        # TODO: http://www.pygtk.org/pygtk2tutorial/sec-ScrolledWindows.html
         self.view = ScribberTextView()
-        vbox.pack_start(self.view, True, True, 2)
+        vbox.pack_start(scrolled_window, True, True, 2)
+
+        scrolled_window.add_with_viewport(self.view)
 
         #check = gtkspell.Spell(view)
         #check.set_language("de_DE")
@@ -65,9 +69,14 @@ class ScribberView(gtk.Window):
         # Statusbar
         self.sbarbox = gtk.HBox(False, 0)
 
-        button_focus = gtk.ToggleButton("Hilight")
-        button_focus.connect("clicked", self.on_focus_click)
+        self.button_focus = gtk.ToggleButton("Focus")
+        self.button_focus.set_image(
+            gtk.image_new_from_file("system-search.png"))
+        self.button_focus.set_active(True)
+        self.button_focus.connect("clicked", self.on_focus_click)
         self.button_fullscreen = gtk.ToggleButton("Fullscreen")
+        self.button_fullscreen.set_image(
+            gtk.image_new_from_file("view-fullscreen.png"))
         self.button_fullscreen.connect("clicked", self.on_fullscreen_click)
 
         sbar_wc = gtk.Statusbar()
@@ -75,7 +84,7 @@ class ScribberView(gtk.Window):
 
         sbar_wc.push(context_id, "wc")
 
-        self.sbarbox.pack_start(button_focus, False, False, 2)
+        self.sbarbox.pack_start(self.button_focus, False, False, 2)
         self.sbarbox.pack_start(self.button_fullscreen, False, False, 2)
         self.sbarbox.pack_end(sbar_wc, True, True, 2)
 
@@ -94,7 +103,7 @@ class ScribberView(gtk.Window):
             self.is_fullscreen = True
 
     def on_focus_click(self, widget, data=None):
-        self.view.get_buffer().focus = self.view.get_buffer().focus 
+        self.view.get_buffer().focus = self.view.get_buffer().focus
 
     def on_window_state_event(self, event, data=None):
         if data.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
@@ -125,11 +134,8 @@ class ScribberTextView(gtk.TextView):
         # TODO: Event missing: When selecting text, and deselecting it again,
         # by clicking somehere in the text, the FocusMode doesnt hilight the
         # right sentence
-
-        # http://www.pygtk.org/docs/pygtk/class-gtkwidget.html
         self.connect('key-press-event', self.on_key_event)
         self.connect('key-release-event', self.on_key_event)
-
         self.connect('button-press-event', self.on_button_event)
         self.connect('button-release-event', self.on_button_event)
 
@@ -138,7 +144,7 @@ class ScribberTextView(gtk.TextView):
         self.modify_font(font)
 
         # Wrap mode
-        self.set_wrap_mode(gtk.WRAP_WORD)
+        self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
 
         # Paragraph spacing
         self.set_pixels_above_lines(3)
@@ -170,7 +176,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
             right_margin=80)
 
         self.tag_heading = self.create_tag("heading", weight=pango.WEIGHT_BOLD,
-            left_margin=50, pixels_above_lines=20, pixels_below_lines=20)
+            left_margin=50, pixels_above_lines=15, pixels_below_lines=10)
 
         self.create_tag("mytable", left_margin=110, pixels_above_lines=20,
             pixels_below_lines=20)

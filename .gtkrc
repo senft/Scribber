@@ -1,4 +1,4 @@
-# .gtkrc file for Writer
+# .gtkrc file for Scribber
 # Changed cursor (color and thickness)
 
 style "text_view"
