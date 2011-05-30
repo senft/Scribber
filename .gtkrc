@@ -1,0 +1,10 @@
+# .gtkrc file for Writer
+# Changed cursor (color and thickness)
+
+style "text_view"
+{
+    GtkWidget::cursor_color = "#ca0000"
+    GtkWidget::cursor_aspect_ratio = 0.1
+}
+class "GtkTextView" style "text_view"
+

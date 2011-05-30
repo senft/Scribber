@@ -165,28 +165,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self.connect('changed', self.on_change)
 
-        self.set_text("""Bei Scribber für Mac hofft Reichenstein, dass die \
-kleinere Distanz zwischen der Werbung im Internet und dem Kauf am PC einen \
-höheren Preis ermöglicht. Scribber für Mac wird daher für etwa 20 US-Dollar \
-verkauft. Rund 120.000 Euro hat die Entwicklung der Software gekostet. \
-Reichenstein hofft, von der Mac-Version mehr Exemplare zu verkaufen als von \
-der iPad-Variante. Diese wurde bisher rund 80.000-mal gekauft. Aus den \
-Einnahmen will er die Weiterentwicklung der Software finanzieren und \
-gegebenenfalls auch Support anbieten. "Ich möchte alles, was ich verdiene, in \
-die Weiterentwicklung stecken. Das macht so viel Spaß, dass ich mir damit \
-nichts Lustigeres kaufen kann als eine bessere Version", so Reichenstein \
-
-Zur künftigen Entwicklung von Scribber hält sich Reichenstein bedeckt. Es gebe \
-noch viele Ideen, wie sich der Schreibprozess verbessern lässt, ohne dass \
-Scribber dabei mit Funktionen überladen werde. Angedacht ist derzeit noch eine \
-Version fürs iPhone. Danach würde sich Reichenstein gern an Scribber für Windows\
-machen, wenn denn die Einnahmen dies zulassen. Und, sofern die Ressourcen \
-vorhanden sind, sei auch eine Version für Android interessant, sagt er.
-
-Sowohl iA Scribber für Mac als auch iA Scribber für iPad stehen über Apples App \
-Store zum Download bereit. Die Mac-Version kostet zum Start 14,49 Euro bzw. \
-17,99 US-Dollar, die iPad-Variante 79 Cent.""")
-
         # Tags: http://www.bravegnu.org/gtktext/x113.html
         self.create_tag("default", foreground="#999999", left_margin=80,
             right_margin=80)
