@@ -1,6 +1,14 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+"""
+
+    Scribber, a text editor that focuses on minimalism
+
+    Icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
+
+"""
+
 # TODO: Spellcheck when exporting (?) gtkspell
 
 import sys
@@ -118,6 +126,7 @@ class ScribberView(gtk.Window):
             self.sbarbox.show()
 
     def delete_event(self, widget, event, data=None):
+        # Really quit?
         return False
 
     def destroy(self, widget, data=None):
