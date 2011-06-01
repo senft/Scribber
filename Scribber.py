@@ -189,54 +189,70 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self.update_markdown(iter)
 
+    def _on_delete_range(self, buf, start, end):
+        pass
+
     patterns = [ ["heading", re.compile("\#"), re.compile("$")],
                  ["italic", re.compile("(?<!\*)\*\w"),
-                    re.compile("\w\*(?!\*)")],
-                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*")] ]
+                    re.compile("\w\*(?!\*)")]]
+                 #["bold", re.compile("\*\*\w"), re.compile("\w\*\*")] ]
 
     def update_markdown(self, start, end=None):
         # TODO: Bugs: - When inserting a heading before text, all texts
         #             becomes heading
         if end is None: end = self.get_end_iter()
 
-#        print "Updating: ", start.get_text(end)
+        finished = False
+        while not finished:
+            for pattern in self.patterns:
+                match = pattern[1].search(start.get_text(end))
 
-        for pattern in self.patterns:
-            match = pattern[1].search(start.get_text(end))
-            if match:
-                # Move start iter forward to begining of pattern we found
-                start.forward_chars(match.start())
-                
-                r2 = pattern[2].search(start.get_text(end))
-                if r2:
-                    # Found the matching end of the pattern
-                    match_end = start.copy()
-                    match_end.forward_chars(r2.end())
+                print "Searching for start: ", start.get_text(end)
 
+                if match:
+                    # Move start iter forward to begining of pattern we found
+                    start.forward_chars(match.start())
                     
-#                    tag = self.get_tag_table().lookup(pattern[0])
-#                    if match_end.has_tag(tag):
-#                        pass
-
+                    r2 = pattern[2].search(start.get_text(end))
+                    if r2:
+                        # Found the matching end of the pattern
+                        match_end = start.copy()
+                        match_end.forward_chars(r2.end())
+                    else:
+                        # Found no matching end for the pattern -> simple apply tag
+                        # until end of buffer
+                        match_end = end.copy()
 
                     # Instead of self.remove_all_tags(start, end) only remove
                     # tags that dont alter color (only markdown tags)
                     for p in self.patterns:
-                        self.remove_tag_by_name(pattern[0], start, end)
-#                    print "Remove from: ", start.get_text(end)
-
+                        self.remove_tag_by_name(pattern[0], start, end) #TODO: Really from start to end?
 
                     self.apply_tag_by_name(pattern[0], start, match_end)
-                else:
-                    # Found no matching end for the pattern -> simple apply tag
-                    # until end of buffer
-                    self.apply_tag_by_name(pattern[0], start, end)
-                
 
-    def _on_delete_range(self, buf, start, end):
-        pass
+                    start = match_end
+                else:
+                    print "t1"
+                    finished = True
+
+                if start == end:
+                    print "t2"
+                    finished = True
+
+    def _get_first_pattern(self, start, end):
+        """ Returns (tagname, start, end) of the first occurence of any
+            known pattern in this buffer. """
+
+        list = []
+
+        for pattern in self.patterns:
+            match = pattern[1].search(start.get_text(end))
+            if match:
+                match.start()
+
 
     def _focus_sentence(self):
+        """ Applys a highlighting tag to the sentence the cursor is in """
         if self.focus:# and not self.get_has_selection():
             # TODO: get_start_iter().has_tag("table") -> hilight whole table
             start = self.get_start_iter()
