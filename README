@@ -1,4 +1,5 @@
 Scribber is a simple text editor that focuses on minimalism.
+
     Some features:
         - Highlithing the current sentence
         - Realtime Markdown
@@ -9,3 +10,5 @@ Scribber is a simple text editor that focuses on minimalism.
     - When moving the cursor while it is out of focus
         refocus to cursor (or does this get eliminated with
         preceding point?) 
+
+Icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
