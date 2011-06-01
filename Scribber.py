@@ -11,35 +11,11 @@
 
 # TODO: Spellcheck when exporting (?) gtkspell
 
-import sys
 import pygtk
 pygtk.require('2.0')
 import gtk
 import pango
-#import gtkspell
-
-
-DEBUG_FLAG = True
-
-
-def _log_debug(msg):
-    if not DEBUG_FLAG:
-        return
-    sys.stderr.write("DEBUG: ")
-    sys.stderr.write(msg)
-    sys.stderr.write("\n")
-
-
-def _log_warn(msg):
-    sys.stderr.write("WARN: ")
-    sys.stderr.write(msg)
-    sys.stderr.write("\n")
-
-
-def _log_error(msg):
-    sys.stderr.write("ERROR: ")
-    sys.stderr.write(msg)
-    sys.stderr.write("\n")
+import re
 
 
 class ScribberView(gtk.Window):
@@ -77,6 +53,7 @@ class ScribberView(gtk.Window):
         # Statusbar
         self.sbarbox = gtk.HBox(False, 0)
 
+        # Buttons
         self.button_focus = gtk.ToggleButton("Focus")
         self.button_focus.set_image(
             gtk.image_new_from_file("system-search.png"))
@@ -102,28 +79,26 @@ class ScribberView(gtk.Window):
         self.show_all()
         gtk.main()
 
+    def on_focus_click(self, widget, data=None):
+        self.view.get_buffer().focus = self.view.get_buffer().focus
+
     def on_fullscreen_click(self, widget, data=None):
         if self.is_fullscreen:
             self.unfullscreen()
+            # Gtk doesnt provied a way to check a windows state, so we have to
+            # keep track ourselves
             self.is_fullscreen = False
         else:
             self.fullscreen()
             self.is_fullscreen = True
 
-    def on_focus_click(self, widget, data=None):
-        self.view.get_buffer().focus = self.view.get_buffer().focus
-
     def on_window_state_event(self, event, data=None):
         if data.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
             self.button_fullscreen.set_active(True)
             self.is_fullscreen = True
-            # TODO: Delete hide and show.. should be disposed seconds after
-            # typing
-            self.sbarbox.hide()
         else:
             self.button_fullscreen.set_active(False)
             self.is_fullscreen = False
-            self.sbarbox.show()
 
     def delete_event(self, widget, event, data=None):
         # Really quit?
@@ -139,14 +114,12 @@ class ScribberTextView(gtk.TextView):
 
         self.set_buffer(ScribberTextBuffer())
 
-        # TODO: Catch all relevant events:
-        # TODO: Event missing: When selecting text, and deselecting it again,
-        # by clicking somehere in the text, the FocusMode doesnt hilight the
-        # right sentence
-        self.connect('key-press-event', self.on_key_event)
+        self.connect_after('key-press-event', self.on_key_event)
         self.connect('key-release-event', self.on_key_event)
-        self.connect('button-press-event', self.on_button_event)
+        self.connect_after('button-press-event', self.on_button_event)
         self.connect('button-release-event', self.on_button_event)
+        self.connect('move-cursor', self.on_move_cursor)
+
 
         # http://www.tortall.net/mu/wiki/PyGTKCairoTutorial
         font = pango.FontDescription("envy code r 12")
@@ -165,42 +138,106 @@ class ScribberTextView(gtk.TextView):
         # Line spacing
         self.set_pixels_inside_wrap(7)
 
+    def on_move_cursor(self, widget, event, data=None, asd=None):
+        # TODO: argument names
+        self.get_buffer()._focus_sentence()
+        pass
+
     def on_key_event(self, widget, event, data=None):
-        self.get_buffer().hilight_sentence()
+        self.get_buffer()._focus_sentence()
+        pass
 
     def on_button_event(self, widget, event, data=None):
-        self.get_buffer().hilight_sentence()
+        self.get_buffer()._focus_sentence()
+        pass
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
     def __init__(self):
         gtk.TextBuffer.__init__(self)
 
+        self.set_text("""Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut sit amet diam mauris. Fusce ac erat justo, ut ultrices ligula. Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa feugiat sem scelerisque imperdiet laoreet justo vulputate. Quisque ullamcorper justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam vel nisi eget tortor sodales dictum.""")
+
         self.focus = True
 
-        self.connect('changed', self.on_change)
+        self.connect_after("insert-text", self._on_insert_text)
+        self.connect_after("delete-range", self._on_delete_range)
 
         # Tags: http://www.bravegnu.org/gtktext/x113.html
-        self.create_tag("default", foreground="#999999", left_margin=80,
-            right_margin=80)
+        self.tag_default = self.create_tag("default", foreground="#999999")
+
+        self.tag_focus = self.create_tag("focus", foreground="#000000")
 
         self.tag_heading = self.create_tag("heading", weight=pango.WEIGHT_BOLD,
             left_margin=50, pixels_above_lines=15, pixels_below_lines=10)
 
-        self.create_tag("mytable", left_margin=110, pixels_above_lines=20,
+        self.tag_mytable = self.create_tag("mytable", left_margin=110, pixels_above_lines=20,
             pixels_below_lines=20)
 
-        self.create_tag("bold", weight=pango.WEIGHT_BOLD,
-            style=pango.STYLE_NORMAL)
-        self.create_tag("italic", style=pango.STYLE_ITALIC)
+        self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
+        self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
+        self.tag_bolditalic = self.create_tag("bolditalic", weight=pango.WEIGHT_BOLD,
+            style=pango.STYLE_ITALIC)
 
-        self.hilight_sentence()
+    def _on_insert_text(self, buf, iter, text, length):
+        iter.backward_chars(length)
+        if not iter.begins_tag():
+            iter.backward_to_tag_toggle(None)
 
-    def on_change(self, buffer):
-        self.markdown()
+        if not (iter.begins_tag(self.tag_bold) or iter.begins_tag(self.tag_italic)):
+            iter.backward_to_tag_toggle(None)
 
-    def hilight_sentence(self):
-        if self.focus:
+        self.update_markdown(iter)
+
+    patterns = [ ["heading", re.compile("\#"), re.compile("$")],
+                 ["italic", re.compile("(?<!\*)\*\w"),
+                    re.compile("\w\*(?!\*)")],
+                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*")] ]
+
+    def update_markdown(self, start, end=None):
+        # TODO: Bugs: - When inserting a heading before text, all texts
+        #             becomes heading
+        if end is None: end = self.get_end_iter()
+
+#        print "Updating: ", start.get_text(end)
+
+        for pattern in self.patterns:
+            match = pattern[1].search(start.get_text(end))
+            if match:
+                # Move start iter forward to begining of pattern we found
+                start.forward_chars(match.start())
+                
+                r2 = pattern[2].search(start.get_text(end))
+                if r2:
+                    # Found the matching end of the pattern
+                    match_end = start.copy()
+                    match_end.forward_chars(r2.end())
+
+                    
+#                    tag = self.get_tag_table().lookup(pattern[0])
+#                    if match_end.has_tag(tag):
+#                        pass
+
+
+                    # Instead of self.remove_all_tags(start, end) only remove
+                    # tags that dont alter color (only markdown tags)
+                    for p in self.patterns:
+                        self.remove_tag_by_name(pattern[0], start, end)
+#                    print "Remove from: ", start.get_text(end)
+
+
+                    self.apply_tag_by_name(pattern[0], start, match_end)
+                else:
+                    # Found no matching end for the pattern -> simple apply tag
+                    # until end of buffer
+                    self.apply_tag_by_name(pattern[0], start, end)
+                
+
+    def _on_delete_range(self, buf, start, end):
+        pass
+
+    def _focus_sentence(self):
+        if self.focus:# and not self.get_has_selection():
             # TODO: get_start_iter().has_tag("table") -> hilight whole table
             start = self.get_start_iter()
             end = self.get_end_iter()
@@ -216,67 +253,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
             # Remove from currently hilighted sentence
             self.remove_tag_by_name("default", sentence_start, sentence_end)
-
-    def markdown(self):
-        self.markdown_heading()
-        self.markdown_emphasis('*', 'italic')
-        self.markdown_emphasis('**', 'bold')
-
-    def markdown_emphasis(self, needle, tag):
-        start = self.get_start_iter()
-        try:
-            (start, end) = start.forward_search(needle,
-                gtk.TEXT_SEARCH_VISIBLE_ONLY, None)
-
-            if end.get_char() == " ":
-                print 'DONT'
-
-#            while(end.get_char() == " "):
-#                (start, end) = start.forward_search(needle,
-#                    gtk.TEXT_SEARCH_VISIBLE_ONLY, None)
-        except:
-            start = None
-
-        while start is not None:
-            eol = end.copy()
-            try:
-                # Find end of iter that marks the second occurence of needle
-                eol = eol.forward_search(needle, 0, None)[1]
-            except:
-                eol = self.get_end_iter()
-
-            self.apply_tag_by_name(tag, start, eol)
-
-            eol.forward_char()
-            try:
-                (start, end) = eol.forward_search(needle,
-                    gtk.TEXT_SEARCH_VISIBLE_ONLY, None)
-            except:
-                start = None
-
-    def markdown_heading(self):
-        start = self.get_start_iter()
-        try:
-            (start, end) = start.forward_search('#',
-            gtk.TEXT_SEARCH_VISIBLE_ONLY, None)
-        except:
-            start = None
-
-        while(start != None):
-            eol = start.copy()
-            eol.forward_line()
-
-            if not start.begins_tag(self.tag_heading) \
-            or not eol.ends_tag(self.tag_heading):
-            # TODO: Bug! when inserting a line between 2 Heading-lines, the new
-            # line is a heading, too
-                self.apply_tag_by_name("heading", start, eol)
-
-            try:
-                (start, end) = end.forward_search('#',
-                gtk.TEXT_SEARCH_VISIBLE_ONLY, None)
-            except:
-                start = None
 
 if __name__ == '__main__':
     ScribberView()
