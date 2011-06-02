@@ -248,7 +248,7 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                 # tags that dont alter color (only markdown tags)
                 for p in self.patterns:
                     #TODO: Really from start to end?
-                    # This is wrong!
+                    # This is wrong! Dont remove everything...
                     self.remove_tag_by_name(p[0], start, end) 
 
                 print "Apply tag to: ", mstart.get_text(mend)
