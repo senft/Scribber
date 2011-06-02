@@ -193,62 +193,116 @@ class ScribberTextBuffer(gtk.TextBuffer):
         pass
 
     patterns = [ ["heading", re.compile("\#"), re.compile("$")],
-                 ["italic", re.compile("(?<!\*)\*\w"),
-                    re.compile("\w\*(?!\*)")]]
-                 #["bold", re.compile("\*\*\w"), re.compile("\w\*\*")] ]
+                 ["italic", re.compile("(?<!\*)(\*\w)"),
+                    re.compile("(\w\*)(?!\*)")],
+                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*")] ]
 
     def update_markdown(self, start, end=None):
-        # TODO: Bugs: - When inserting a heading before text, all texts
-        #             becomes heading
+        # Evtl. in einem Durchgang zwischenspeichern welche Patterns ich schon
+        # als "ende" verwendet habe, sodass diese nicht nochmal als Anfang
+        # geparst werden
+
         if end is None: end = self.get_end_iter()
 
         finished = False
         while not finished:
-            for pattern in self.patterns:
-                match = pattern[1].search(start.get_text(end))
+            tag, mstart, mend = self._get_first_pattern(start, end)
 
-                print "Searching for start: ", start.get_text(end)
+            if tag:
+                print "Found pattern: ", start.get_text(end)
+                # Instead of self.remove_all_tags(start, end) only remove
+                # tags that dont alter color (only markdown tags)
+                for p in self.patterns:
+                    #TODO: Really from start to end?
+                    self.remove_tag_by_name(p[0], start, end) 
 
-                if match:
-                    # Move start iter forward to begining of pattern we found
-                    start.forward_chars(match.start())
-                    
-                    r2 = pattern[2].search(start.get_text(end))
-                    if r2:
-                        # Found the matching end of the pattern
-                        match_end = start.copy()
-                        match_end.forward_chars(r2.end())
-                    else:
-                        # Found no matching end for the pattern -> simple apply tag
-                        # until end of buffer
-                        match_end = end.copy()
+                self.apply_tag_by_name(tag, mstart, mend)
 
-                    # Instead of self.remove_all_tags(start, end) only remove
-                    # tags that dont alter color (only markdown tags)
-                    for p in self.patterns:
-                        self.remove_tag_by_name(pattern[0], start, end) #TODO: Really from start to end?
+            if not tag:
+                finished = True
+                continue
 
-                    self.apply_tag_by_name(pattern[0], start, match_end)
+            start = mend
 
-                    start = match_end
-                else:
-                    print "t1"
-                    finished = True
+            if start == end:
+                finished = True
 
-                if start == end:
-                    print "t2"
-                    finished = True
+#        finished = False
+#        while not finished:
+#            for pattern in self.patterns:
+#                match = pattern[1].search(start.get_text(end))
+#
+#                print "Searching for start: ", start.get_text(end)
+#
+#                if match:
+#                    # Move start iter forward to begining of pattern we found
+#                    start.forward_chars(match.start())
+#                    
+#                    r2 = pattern[2].search(start.get_text(end))
+#                    if r2:
+#                        # Found the matching end of the pattern
+#                        match_end = start.copy()
+#                        match_end.forward_chars(r2.end())
+#                    else:
+#                        # Found no matching end for the pattern -> simple apply tag
+#                        # until end of buffer
+#                        match_end = end.copy()
+#
+#                    # Instead of self.remove_all_tags(start, end) only remove
+#                    # tags that dont alter color (only markdown tags)
+#                    for p in self.patterns:
+#                        #TODO: Really from start to end?
+#                        self.remove_tag_by_name(pattern[0], start, end) 
+#
+#                    self.apply_tag_by_name(pattern[0], start, match_end)
+#
+#                    start = match_end
+#                else:
+#                    print "t1"
+#                    finished = True
+#
+#                if start == end:
+#                    print "t2"
+#                    finished = True
 
     def _get_first_pattern(self, start, end):
         """ Returns (tagname, start, end) of the first occurence of any
             known pattern in this buffer. """
+        # TODO: Refactor, plx
 
         list = []
 
         for pattern in self.patterns:
-            match = pattern[1].search(start.get_text(end))
-            if match:
-                match.start()
+            mstart = start.copy()
+
+            # Match begining
+            result_start = pattern[1].search(mstart.get_text(end))
+            if result_start:
+                #print "Matched: ", result_start.groups()
+                # Skip the already matched start
+                mstart.forward_chars(result_start.start())
+
+                # Match end
+                result_end = pattern[2].search(mstart.get_text(end))
+                if result_end:
+                    #print "Matched: ", result_end.groups()
+                    mend = mstart.copy()
+                    mend.forward_chars(result_end.end()-1)
+                else:
+                    mend = self.get_end_iter()
+
+                list.append([result_start.start(), [pattern[0], mstart, mend]])
+
+        #print list
+        if len(list) == 0: return (None, None, None)
+
+        pattern = list[0]
+        for p in list:
+            if p[0] < pattern[0]:
+                pattern = p
+
+        #print "return: ", pattern[1]
+        return pattern[1]
 
 
     def _focus_sentence(self):
