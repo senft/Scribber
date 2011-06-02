@@ -120,7 +120,6 @@ class ScribberTextView(gtk.TextView):
         self.connect('button-release-event', self.on_button_event)
         self.connect('move-cursor', self.on_move_cursor)
 
-
         # http://www.tortall.net/mu/wiki/PyGTKCairoTutorial
         font = pango.FontDescription("envy code r 12")
         self.modify_font(font)
@@ -140,15 +139,15 @@ class ScribberTextView(gtk.TextView):
 
     def on_move_cursor(self, widget, event, data=None, asd=None):
         # TODO: argument names
-        self.get_buffer()._focus_sentence()
+        #self.get_buffer()._focus_sentence()
         pass
 
     def on_key_event(self, widget, event, data=None):
-        self.get_buffer()._focus_sentence()
+        #self.get_buffer()._focus_sentence()
         pass
 
     def on_button_event(self, widget, event, data=None):
-        self.get_buffer()._focus_sentence()
+        #self.get_buffer()._focus_sentence()
         pass
 
 
@@ -156,7 +155,20 @@ class ScribberTextBuffer(gtk.TextBuffer):
     def __init__(self):
         gtk.TextBuffer.__init__(self)
 
-        self.set_text("""Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut sit amet diam mauris. Fusce ac erat justo, ut ultrices ligula. Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa feugiat sem scelerisque imperdiet laoreet justo vulputate. Quisque ullamcorper justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam vel nisi eget tortor sodales dictum.""")
+        self.set_text("""Lorem ipsum dolor sit amet, consectetur adipiscing \
+elit. Ut sit amet diam mauris. Fusce ac erat justo, ut ultrices ligula. \
+Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
+tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
+leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
+Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
+sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
+fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
+feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
+elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
+feugiat sem scelerisque imperdiet laoreet justo vulputate. Quisque ullamcorper\
+ justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
+tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
+ vel nisi eget tortor sodales dictum.""")
 
         self.focus = True
 
@@ -171,23 +183,27 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.tag_heading = self.create_tag("heading", weight=pango.WEIGHT_BOLD,
             left_margin=50, pixels_above_lines=15, pixels_below_lines=10)
 
-        self.tag_mytable = self.create_tag("mytable", left_margin=110, pixels_above_lines=20,
-            pixels_below_lines=20)
+        self.tag_mytable = self.create_tag("mytable", left_margin=110,
+            pixels_above_lines=20, pixels_below_lines=20)
 
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
-        self.tag_bolditalic = self.create_tag("bolditalic", weight=pango.WEIGHT_BOLD,
-            style=pango.STYLE_ITALIC)
+        self.tag_bolditalic = self.create_tag("bolditalic",
+            weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
 
     def _on_insert_text(self, buf, iter, text, length):
         iter.backward_chars(length)
         if not iter.begins_tag():
             iter.backward_to_tag_toggle(None)
 
-        if not (iter.begins_tag(self.tag_bold) or iter.begins_tag(self.tag_italic)):
+        # Maybe we just found the beginning of a "hilight-tag"
+        # TODO: Check in a loop for all tags
+        if not (iter.begins_tag(self.tag_bold) or
+            iter.begins_tag(self.tag_italic)):
+
             iter.backward_to_tag_toggle(None)
 
-        self.update_markdown(iter)
+        self._update_markdown(iter)
 
     def _on_delete_range(self, buf, start, end):
         pass
@@ -197,73 +213,55 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     re.compile("(\w\*)(?!\*)")],
                  ["bold", re.compile("\*\*\w"), re.compile("\w\*\*")] ]
 
-    def update_markdown(self, start, end=None):
-        # Evtl. in einem Durchgang zwischenspeichern welche Patterns ich schon
-        # als "ende" verwendet habe, sodass diese nicht nochmal als Anfang
-        # geparst werden
+    def _update_markdown(self, start, end=None):
+        # Used to save which iters we already used as start or end of a pattern
+        used_iters = {}
 
         if end is None: end = self.get_end_iter()
 
         finished = False
         while not finished:
+            
             tag, mstart, mend = self._get_first_pattern(start, end)
 
-            if tag:
+            print "\n---------------------------------------------------------"
+            print "Searching in: ", start.get_text(end)
+
+            if not tag:
+                # Found no pattern
+                finished = True
+                continue
+            else:
+                # Found a pattern
+                if mstart.get_offset() in used_iters:
+                    # Iter already was used as a end-iter -> skip it
+                    start = mstart
+                    start.forward_char()
+                    continue
+                if mend.get_offset() in used_iters:
+                    start = mend
+                    start.forward_char()
+                    continue
+
                 print "Found pattern: ", start.get_text(end)
                 # Instead of self.remove_all_tags(start, end) only remove
                 # tags that dont alter color (only markdown tags)
                 for p in self.patterns:
                     #TODO: Really from start to end?
+                    # This is wrong!
                     self.remove_tag_by_name(p[0], start, end) 
 
+                print "Apply tag to: ", mstart.get_text(mend)
                 self.apply_tag_by_name(tag, mstart, mend)
+                used_iters[mstart.get_offset()] = mstart.get_char()
+                used_iters[mend.get_offset()] = mend.get_char()
 
-            if not tag:
-                finished = True
-                continue
-
+            #start = mstart
+            #start.forward_char()
             start = mend
 
             if start == end:
                 finished = True
-
-#        finished = False
-#        while not finished:
-#            for pattern in self.patterns:
-#                match = pattern[1].search(start.get_text(end))
-#
-#                print "Searching for start: ", start.get_text(end)
-#
-#                if match:
-#                    # Move start iter forward to begining of pattern we found
-#                    start.forward_chars(match.start())
-#                    
-#                    r2 = pattern[2].search(start.get_text(end))
-#                    if r2:
-#                        # Found the matching end of the pattern
-#                        match_end = start.copy()
-#                        match_end.forward_chars(r2.end())
-#                    else:
-#                        # Found no matching end for the pattern -> simple apply tag
-#                        # until end of buffer
-#                        match_end = end.copy()
-#
-#                    # Instead of self.remove_all_tags(start, end) only remove
-#                    # tags that dont alter color (only markdown tags)
-#                    for p in self.patterns:
-#                        #TODO: Really from start to end?
-#                        self.remove_tag_by_name(pattern[0], start, end) 
-#
-#                    self.apply_tag_by_name(pattern[0], start, match_end)
-#
-#                    start = match_end
-#                else:
-#                    print "t1"
-#                    finished = True
-#
-#                if start == end:
-#                    print "t2"
-#                    finished = True
 
     def _get_first_pattern(self, start, end):
         """ Returns (tagname, start, end) of the first occurence of any
