@@ -156,7 +156,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         gtk.TextBuffer.__init__(self)
 
         self.set_text("""Lorem ipsum dolor sit amet, consectetur adipiscing \
-elit. Ut sit amet diam mauris. Fusce ac erat justo, ut ultrices ligula. \
+elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
@@ -165,7 +165,7 @@ sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
 fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
 feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
 elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
-feugiat sem scelerisque imperdiet laoreet justo vulputate. Quisque ullamcorper\
+feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
 tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
  vel nisi eget tortor sodales dictum.""")
@@ -208,57 +208,72 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
     def _on_delete_range(self, buf, start, end):
         pass
 
-    patterns = [ ["heading", re.compile("\#"), re.compile("$")],
+    patterns = [ ["heading", re.compile("\#"), re.compile("$"), 1],
                  ["italic", re.compile("(?<!\*)(\*\w)"),
-                    re.compile("(\w\*)(?!\*)")],
-                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*")] ]
+                    re.compile("(\w\*)(?!\*)"), 1],
+                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*"), 2] ]
 
     def _update_markdown(self, start, end=None):
         # Used to save which iters we already used as start or end of a pattern
-        used_iters = {}
+        used_iters = [] 
 
         if end is None: end = self.get_end_iter()
 
         finished = False
         while not finished:
             
-            tag, mstart, mend = self._get_first_pattern(start, end)
+            tagn, mstart, mend, length = self._get_first_pattern(start, end)
 
             print "\n---------------------------------------------------------"
-            print "Searching in: ", start.get_text(end)
+            print "************** Searching in: ", start.get_text(end)
 
-            if not tag:
+            if not tagn:
                 # Found no pattern
                 finished = True
                 continue
             else:
                 # Found a pattern
-                if mstart.get_offset() in used_iters:
-                    # Iter already was used as a end-iter -> skip it
-                    start = mstart
-                    start.forward_char()
-                    continue
-                if mend.get_offset() in used_iters:
-                    start = mend
-                    start.forward_char()
-                    continue
+                tag = self.get_tag_table().lookup(tagn)
 
                 print "Found pattern: ", start.get_text(end)
+
+                # TODO: +1 universal?
+                if mstart.get_offset() + 1 in used_iters:
+                    print "************** Skip iterator (start iter was used)"
+                    start = mstart
+                    start.forward_chars(length)
+                    continue
+                # end_iter can be used multiple times
+                if mend.get_offset() in used_iters and not mend.equal(end):
+                    print "************** Skip iterator (end iter was used)"
+                    start = mstart
+                    start.forward_chars(length)
+                    mend = self.get_end_iter()
+                    continue
+
+                if mstart.begins_tag(tag) and mend.ends_tag(tag):
+                    print "************** Pattern already has tag"
+                    start = mstart
+                    start.forward_chars(length)
+                    continue
+
                 # Instead of self.remove_all_tags(start, end) only remove
                 # tags that dont alter color (only markdown tags)
                 for p in self.patterns:
-                    #TODO: Really from start to end?
-                    # This is wrong! Dont remove everything...
-                    self.remove_tag_by_name(p[0], start, end) 
+                        #TODO: Really from start to end?
+                        # This is wrong! Dont remove everything...
+                    self.remove_tag_by_name(p[0], mstart, end) 
 
-                print "Apply tag to: ", mstart.get_text(mend)
-                self.apply_tag_by_name(tag, mstart, mend)
-                used_iters[mstart.get_offset()] = mstart.get_char()
-                used_iters[mend.get_offset()] = mend.get_char()
+                print "************** Removed tags in: ", mstart.get_text(end)
 
-            #start = mstart
-            #start.forward_char()
-            start = mend
+                print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
+                self.apply_tag_by_name(tagn, mstart, mend)
+
+                used_iters.append(mstart.get_offset())
+                used_iters.append(mend.get_offset())
+
+            start = mstart
+            start.forward_chars(length)
 
             if start == end:
                 finished = True
@@ -285,14 +300,16 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                 if result_end:
                     #print "Matched: ", result_end.groups()
                     mend = mstart.copy()
-                    mend.forward_chars(result_end.end()-1)
+                    #TODO: -1 or not? Probably depends on length of RegExp
+                    #mend.forward_chars(result_end.end() - 1)
+                    mend.forward_chars(result_end.end())
                 else:
                     mend = self.get_end_iter()
 
-                list.append([result_start.start(), [pattern[0], mstart, mend]])
+                list.append([result_start.start(), [pattern[0], mstart, mend, pattern[3]]])
 
         #print list
-        if len(list) == 0: return (None, None, None)
+        if len(list) == 0: return (None, None, None, None)
 
         pattern = list[0]
         for p in list:
