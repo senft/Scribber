@@ -253,6 +253,8 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
 
                 if mstart.begins_tag(tag) and mend.ends_tag(tag):
                     print "************** Pattern already has tag"
+                    for p in self.patterns:
+                        self.remove_tag_by_name(p[0], start, mstart) 
                     start = mstart
                     start.forward_chars(length)
                     continue
@@ -260,8 +262,6 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                 # Instead of self.remove_all_tags(start, end) only remove
                 # tags that dont alter color (only markdown tags)
                 for p in self.patterns:
-                        #TODO: Really from start to end?
-                        # This is wrong! Dont remove everything...
                     self.remove_tag_by_name(p[0], mstart, end) 
 
                 print "************** Removed tags in: ", mstart.get_text(end)
