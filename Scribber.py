@@ -281,43 +281,37 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
     def _get_first_pattern(self, start, end):
         """ Returns (tagname, start, end) of the first occurence of any
             known pattern in this buffer. """
-        # TODO: Refactor, plx
-
-        list = []
+        matches = []
 
         for pattern in self.patterns:
             mstart = start.copy()
 
+            pattern_tagn, pattern_start, pattern_end, pattern_length = pattern
+
             # Match begining
-            result_start = pattern[1].search(mstart.get_text(end))
+            result_start = pattern_start.search(mstart.get_text(end))
             if result_start:
-                #print "Matched: ", result_start.groups()
-                # Skip the already matched start
+                # TODO: Maybe: Shortcut here, if we found a match at
+                # mstart.get_offset() == 0, because no match will be before
+                # that one
+
+                # Forward until start of match
                 mstart.forward_chars(result_start.start())
 
                 # Match end
-                result_end = pattern[2].search(mstart.get_text(end))
+                result_end = pattern_end.search(mstart.get_text(end))
                 if result_end:
-                    #print "Matched: ", result_end.groups()
                     mend = mstart.copy()
-                    #TODO: -1 or not? Probably depends on length of RegExp
-                    #mend.forward_chars(result_end.end() - 1)
                     mend.forward_chars(result_end.end())
                 else:
+                    # No pattern for end found -> match until end
                     mend = self.get_end_iter()
 
-                list.append([result_start.start(), [pattern[0], mstart, mend, pattern[3]]])
+                matches.append([result_start.start(), [pattern_tagn, mstart,
+                    mend, pattern[3]]])
 
-        #print list
-        if len(list) == 0: return (None, None, None, None)
-
-        pattern = list[0]
-        for p in list:
-            if p[0] < pattern[0]:
-                pattern = p
-
-        #print "return: ", pattern[1]
-        return pattern[1]
+        if len(matches) == 0: return (None, None, None, None)
+        return min(matches)[1]
 
 
     def _focus_sentence(self):

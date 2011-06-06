@@ -11,7 +11,7 @@ class TestSequenceFunctions(unittest.TestCase):
         self.buffer.set_text("*A**BC*D HALLO *ASD*")
 
     def test_get_first_pattern(self):
-        (tagname, start ,end) = self.buffer._get_first_pattern(
+        (tagname, start ,end, length) = self.buffer._get_first_pattern(
             self.buffer.get_start_iter(), self.buffer.get_end_iter())
 
         self.assertTrue(start.equal(self.buffer.get_start_iter()))
