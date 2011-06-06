@@ -152,6 +152,12 @@ class ScribberTextView(gtk.TextView):
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
+
+    patterns = [ ["heading", re.compile("\#"), re.compile("$"), 1],
+                 ["italic", re.compile("(?<!\*)(\*\w)"),
+                    re.compile("(\w\*)(?!\*)"), 1],
+                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*"), 2] ]
+
     def __init__(self):
         gtk.TextBuffer.__init__(self)
 
@@ -175,7 +181,6 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
 
-        # Tags: http://www.bravegnu.org/gtktext/x113.html
         self.tag_default = self.create_tag("default", foreground="#999999")
 
         self.tag_focus = self.create_tag("focus", foreground="#000000")
@@ -186,35 +191,16 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
         self.tag_mytable = self.create_tag("mytable", left_margin=110,
             pixels_above_lines=20, pixels_below_lines=20)
 
-        self.tag_bold = self.create_tag("DEFAULT", weight=pango.WEIGHT_NORMAL,
-            style=pango.STYLE_NORMAL)
-
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
         self.tag_bolditalic = self.create_tag("bolditalic",
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
 
     def _on_insert_text(self, buf, iter, text, length):
-        iter.backward_chars(length)
-        if not iter.begins_tag():
-            iter.backward_to_tag_toggle(None)
-
-        # Maybe we just found the beginning of a "hilight-tag"
-        # TODO: Check in a loop for all tags
-        if not (iter.begins_tag(self.tag_bold) or
-            iter.begins_tag(self.tag_italic)):
-
-            iter.backward_to_tag_toggle(None)
-
-        self._update_markdown(iter)
+        self._update_markdown(self.get_start_iter())
 
     def _on_delete_range(self, buf, start, end):
-        pass
-
-    patterns = [ ["heading", re.compile("\#"), re.compile("$"), 1],
-                 ["italic", re.compile("(?<!\*)(\*\w)"),
-                    re.compile("(\w\*)(?!\*)"), 1],
-                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*"), 2] ]
+        self._update_markdown(self.get_start_iter())
 
     def _update_markdown(self, start, end=None):
         # Used to save which iters we already used as start or end of a pattern
@@ -224,67 +210,38 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
 
         finished = False
 
-        applied_tag = False
+        # Only remove old markdown tags (no hilight tags)
+        for p in self.patterns:
+            self.remove_tag_by_name(p[0], start, end) 
 
         while not finished:
             tagn, mstart, mend, length = self._get_first_pattern(start, end)
 
-            print "\n\n---------------------------------------------------------"
-#            print "************** Searching in: ", start.get_text(end)
-
-            if not tagn:
-                # Found no pattern
-                finished = True
-                continue
-            else:
+            if tagn:
                 # Found a pattern
-                tag = self.get_tag_table().lookup(tagn)
-
-                print "Found pattern: ", mstart.get_text(mend)
 
                 # TODO: +1 universal?
-                if mstart.get_offset()  in used_iters:
-                    print "************** Skip iterator (start iter was used)"
+                if mstart.get_offset() + 1 in used_iters or \
+                    (mend.get_offset() in used_iters and not mend.equal(end)):
                     start = mstart
                     start.forward_chars(length)
                     continue
-                # end_iter can be used multiple times
-                if mend.get_offset() in used_iters and not mend.equal(end):
-                    print "************** Skip iterator (end iter was used)"
-                    start = mstart
-                    start.forward_chars(length)
-                    # TODO Wrong! Dont use end-iter right away.. maybe we find
-                    # the real end... though this seems to make things right
-                    mend = self.get_end_iter()
-                    continue
 
-                if mstart.begins_tag(tag) and mend.ends_tag(tag):
-                    print "************** Pattern already has tag"
-                    for p in self.patterns:
-                        self.remove_tag_by_name(p[0], start, mstart) 
-                    start = mstart
-                    start.forward_chars(length)
-                    applied_tag = True
-                    continue
-
-                # Only remove old markdown tags (no hilight tags)
-                if not applied_tag:
-                    for p in self.patterns:
-                        self.remove_tag_by_name(p[0], mstart, end) 
-                print "************** Removed tags in: ", mstart.get_text(end)
-
-                print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
+                # print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
                 self.apply_tag_by_name(tagn, mstart, mend)
-                applied_tag = True
 
                 used_iters.append(mstart.get_offset())
                 used_iters.append(mend.get_offset())
 
-            start = mstart
-            start.forward_chars(length)
+                start = mstart
+                start.forward_chars(length)
 
-            if start == end:
+                if start == end:
+                    finished = True
+            else:
+                # No pattern found
                 finished = True
+
 
     def _get_first_pattern(self, start, end):
         """ Returns (tagname, start, end) of the first occurence of any
