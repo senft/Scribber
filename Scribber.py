@@ -162,7 +162,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
                  ['heading4', re.compile('\#{4}(?!\#) '), re.compile(''), 1],
                  ['heading5', re.compile('\#{5}(?!\#) '), re.compile(''), 1],
                  ['heading6', re.compile('\#{6} '), re.compile(''), 1],
-                 ['mytable', re.compile('\* '), re.compile(''), 1],
+                 ['table_default', re.compile('\* '), re.compile(''), 1],
+                 ['table_sorted', re.compile('\d+\. '), re.compile(''), 1],
                  ['italic', re.compile('(?<!\*)(\*\w)'),
                    re.compile('(\w\*)(?!\*)'), 1],
                  ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2] ]
@@ -257,7 +258,8 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         self.tag_heading6 = self.create_tag("heading6", weight=pango.WEIGHT_BOLD,
             left_margin=80)
 
-        self.tag_mytable = self.create_tag("mytable", left_margin=110)
+        self.tag_table_default = self.create_tag("table_default", left_margin=110)
+        self.tag_table_sorted = self.create_tag("table_sorted", left_margin=110)
 
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
@@ -268,8 +270,10 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         self._update_markdown(self.get_start_iter())
 
     def _on_insert_text(self, buf, iter, text, length):
-        if iter.has_tag(self.tag_mytable) and text == "\n":
+        if iter.has_tag(self.tag_table_default) and text == "\n":
             self.insert_at_cursor("* ")
+        if iter.has_tag(self.tag_table_sorted) and text == "\n":
+            self.insert_at_cursor("\d ")
 
         self._update_markdown(self.get_start_iter())
 
@@ -284,7 +288,7 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
         finished = False
 
-        # Only remove old markdown tags (no hilight tags)
+        # Only remove markdown tags (no focus tags)
         for p in self.patterns:
             self.remove_tag_by_name(p[0], start, end) 
 
@@ -336,7 +340,7 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
                 # Forward until start of match
                 mstart.forward_chars(result_start.start())
 
-                if pattern_tagn.startswith('heading') or pattern_tagn == 'mytable':
+                if pattern_tagn.startswith('heading') or pattern_tagn == 'table_default':
                     # No need to search here. Just match 'til end
                     mend = mstart.copy()
                     mend.forward_line()
@@ -380,10 +384,10 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
             self.remove_tag_by_name("focus", start, end)
 
             if starts_sentence or inside_sentence or ends_sentence:
-                if cursor_iter.has_tag(self.tag_mytable):
+                if cursor_iter.has_tag(self.tag_table_default):
                     # Hilight current table
-                    mstart.backward_to_tag_toggle(self.tag_mytable)
-                    mend.forward_to_tag_toggle(self.tag_mytable)
+                    mstart.backward_to_tag_toggle(self.tag_table_default)
+                    mend.forward_to_tag_toggle(self.tag_table_default)
                 else:
                     # Hilight current sentence
                     if not starts_sentence: mstart.backward_sentence_start()
