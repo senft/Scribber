@@ -137,6 +137,8 @@ class ScribberTextView(gtk.TextView):
         # Line spacing
         self.set_pixels_inside_wrap(7)
 
+        self._focus_current_sentence()
+
     def _on_move_cursor(self, widget, event, data=None, asd=None):
         self._focus_current_sentence()
 
@@ -154,16 +156,45 @@ class ScribberTextView(gtk.TextView):
 
 class ScribberTextBuffer(gtk.TextBuffer):
 
-    patterns = [ ["heading", re.compile("\#"), re.compile("$"), 1],
-                 ["italic", re.compile("(?<!\*)(\*\w)"),
-                    re.compile("(\w\*)(?!\*)"), 1],
-                 ["bold", re.compile("\*\*\w"), re.compile("\w\*\*"), 2] ]
+    patterns = [ ['heading', re.compile('\# '), re.compile(''), 1],
+                 ['mytable', re.compile('\* '), re.compile(''), 1],
+                 ['italic', re.compile('(?<!\*)(\*\w)'),
+                   re.compile('(\w\*)(?!\*)'), 1],
+                 ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2] ]
 
     def __init__(self):
         gtk.TextBuffer.__init__(self)
 
-        self.set_text("""Lorem ipsum dolor sit amet, consectetur adipiscing \
+        self.set_text("""# Ab geht die Post\nLorem ipsum dolor sit amet, \
 elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
+Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
+tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
+leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
+Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
+sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
+fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
+feugiat erat dignissim. Aliquam *tempus*, quam non suscipit varius, ligula quam \
+elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
+feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
+ justo et velit dapibus **vulputate** pharetra lorem lobortis. Phasellus eget \
+tellus sed odio facilisis euismod. Mauris a elit libero.\n
+* Numero One
+* Zwei
+* Drei
+\n gravida ligula. \
+Nam elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
+Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
+tempus leo. Nulla facilisi. Morbi *dignissim ultrices velit*, posuere accumsan \
+leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
+Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
+sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
+fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
+feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
+elementum orci, vitae *euismod lectus nulla non mauris. Proin rutrum massa \
+feugiat sem scelerisque **imperdiet** laoreet vulputate. Quisque ullamcorper\
+ justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
+tellus sed odio facilisis* euismod. Mauris a elit libero, a gravida ligula. Nam\
+elit.\n\n# Ich bin total aufgeregt \n Ut sit amet diam mauris. Fusce ac erat \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
@@ -175,7 +206,6 @@ elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
 feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
 tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
-elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
@@ -186,19 +216,9 @@ feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
 elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
 feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
-tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
-elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
-Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
-sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
-fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
-feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
-elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
-feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
- justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
-tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
  vel nisi eget tortor sodales dictum.""")
 
         self.focus = True
@@ -206,22 +226,27 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
 
-        self.tag_default = self.create_tag("default", foreground="#999999")
+        self.tag_default = self.create_tag("default", foreground="#888888")
 
         self.tag_focus = self.create_tag("focus", foreground="#000000")
 
         self.tag_heading = self.create_tag("heading", weight=pango.WEIGHT_BOLD,
             left_margin=50, pixels_above_lines=15, pixels_below_lines=10)
 
-        self.tag_mytable = self.create_tag("mytable", left_margin=110,
-            pixels_above_lines=20, pixels_below_lines=20)
+        self.tag_mytable = self.create_tag("mytable", left_margin=110)
 
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
         self.tag_bolditalic = self.create_tag("bolditalic",
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
 
+
+        self._update_markdown(self.get_start_iter())
+
     def _on_insert_text(self, buf, iter, text, length):
+        if iter.has_tag(self.tag_mytable) and text == "\n":
+            self.insert_at_cursor("* ")
+
         self._update_markdown(self.get_start_iter())
 
     def _on_delete_range(self, buf, start, end):
@@ -251,7 +276,7 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                     start.forward_chars(length)
                     continue
 
-                print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
+                #print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
                 self.apply_tag_by_name(tagn, mstart, mend)
 
                 used_iters.append(mstart.get_offset())
@@ -286,6 +311,15 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
 
                 # Forward until start of match
                 mstart.forward_chars(result_start.start())
+
+                if pattern_tagn == 'heading' or pattern_tagn == 'mytable':
+                    # No need to search here. Just match 'til end
+                    mend = mstart.copy()
+                    mend.forward_line()
+                    matches.append([result_start.start(), [pattern_tagn, mstart,
+                    mend, pattern[3]]])
+                    continue
+
 
                 # Match end
                 result_end = pattern_end.search(mstart.get_text(end))
