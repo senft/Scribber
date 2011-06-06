@@ -114,11 +114,11 @@ class ScribberTextView(gtk.TextView):
 
         self.set_buffer(ScribberTextBuffer())
 
-        self.connect_after('key-press-event', self.on_key_event)
-        self.connect('key-release-event', self.on_key_event)
-        self.connect_after('button-press-event', self.on_button_event)
-        self.connect('button-release-event', self.on_button_event)
-        self.connect('move-cursor', self.on_move_cursor)
+        self.connect_after('key-press-event', self._on_key_event)
+        self.connect('key-release-event', self._on_key_event)
+        self.connect_after('button-press-event', self._on_button_event)
+        self.connect('button-release-event', self._on_button_event)
+        self.connect('move-cursor', self._on_move_cursor)
 
         # http://www.tortall.net/mu/wiki/PyGTKCairoTutorial
         font = pango.FontDescription("envy code r 12")
@@ -137,18 +137,19 @@ class ScribberTextView(gtk.TextView):
         # Line spacing
         self.set_pixels_inside_wrap(7)
 
-    def on_move_cursor(self, widget, event, data=None, asd=None):
-        # TODO: argument names
-        #self.get_buffer()._focus_sentence()
-        pass
+    def _on_move_cursor(self, widget, event, data=None, asd=None):
+        self._focus_current_sentence()
 
-    def on_key_event(self, widget, event, data=None):
-        #self.get_buffer()._focus_sentence()
-        pass
+    def _on_key_event(self, widget, event, data=None):
+        self._focus_current_sentence()
 
-    def on_button_event(self, widget, event, data=None):
-        #self.get_buffer()._focus_sentence()
-        pass
+    def _on_button_event(self, widget, event, data=None):
+        self._focus_current_sentence()
+
+    def _focus_current_sentence(self):
+        # TODO: Scroll doesnt work
+        sentence_start = self.get_buffer()._focus_current_sentence()
+        self.scroll_to_iter(sentence_start, 0, True, 0.0, 0.0)
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
@@ -162,6 +163,30 @@ class ScribberTextBuffer(gtk.TextBuffer):
         gtk.TextBuffer.__init__(self)
 
         self.set_text("""Lorem ipsum dolor sit amet, consectetur adipiscing \
+elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
+Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
+tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
+leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
+Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
+sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
+fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
+feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
+elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
+feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
+ justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
+tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
+elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
+Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
+tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
+leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
+Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
+sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
+fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
+feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
+elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
+feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
+ justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
+tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
 elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
@@ -219,7 +244,6 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
 
             if tagn:
                 # Found a pattern
-
                 # TODO: +1 universal?
                 if mstart.get_offset() + 1 in used_iters or \
                     (mend.get_offset() in used_iters and not mend.equal(end)):
@@ -227,7 +251,7 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                     start.forward_chars(length)
                     continue
 
-                # print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
+                print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
                 self.apply_tag_by_name(tagn, mstart, mend)
 
                 used_iters.append(mstart.get_offset())
@@ -279,10 +303,13 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
         return min(matches)[1]
 
 
-    def _focus_sentence(self):
-        """ Applys a highlighting tag to the sentence the cursor is in """
+    def _focus_current_sentence(self):
+        """ Applys a highlighting tag to the sentence the cursor is on """
+
         if self.focus:# and not self.get_has_selection():
+
             # TODO: get_start_iter().has_tag("table") -> hilight whole table
+
             start = self.get_start_iter()
             end = self.get_end_iter()
 
@@ -292,11 +319,19 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
             sentence_end = self.get_iter_at_mark(self.get_insert())
             sentence_end.forward_sentence_end()
 
-            # Set normal style for whole text
             self.apply_tag_by_name("default", start, end)
+            self.remove_tag_by_name("focus", start, end)
+            self.apply_tag_by_name("focus", sentence_start, sentence_end)
 
-            # Remove from currently hilighted sentence
-            self.remove_tag_by_name("default", sentence_start, sentence_end)
+        return sentence_start
+
+
+            # Set normal style for whole text
+#            self.apply_tag_by_name("default", start, end)
+#
+#            # Remove from currently hilighted sentence
+#            self.remove_tag_by_name("default", sentence_start, sentence_end)
+#            self.apply_tag_by_name("focus", sentence_start, sentence_end)
 
 if __name__ == '__main__':
     ScribberView()
