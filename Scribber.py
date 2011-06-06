@@ -156,7 +156,12 @@ class ScribberTextView(gtk.TextView):
 
 class ScribberTextBuffer(gtk.TextBuffer):
 
-    patterns = [ ['heading', re.compile('\# '), re.compile(''), 1],
+    patterns = [ ['heading1', re.compile('\#(?!\#) '), re.compile(''), 1],
+                 ['heading2', re.compile('\#{2}(?!\#) '), re.compile(''), 1],
+                 ['heading3', re.compile('\#{3}(?!\#) '), re.compile(''), 1],
+                 ['heading4', re.compile('\#{4}(?!\#) '), re.compile(''), 1],
+                 ['heading5', re.compile('\#{5}(?!\#) '), re.compile(''), 1],
+                 ['heading6', re.compile('\#{6} '), re.compile(''), 1],
                  ['mytable', re.compile('\* '), re.compile(''), 1],
                  ['italic', re.compile('(?<!\*)(\*\w)'),
                    re.compile('(\w\*)(?!\*)'), 1],
@@ -165,7 +170,9 @@ class ScribberTextBuffer(gtk.TextBuffer):
     def __init__(self):
         gtk.TextBuffer.__init__(self)
 
-        self.set_text("""\n# Ab geht die Post\nLorem ipsum dolor sit amet, \
+        self.set_text("""
+# Ab geht die Post
+Lorem ipsum dolor sit amet, \
 elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
@@ -202,11 +209,14 @@ Ut sit amet diam mauris. Fusce ac erat \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
-Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
+Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum.
+## Level 2
+### Level 3 
 sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
 fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
 feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
-elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
+elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa
+### WHAAAAAT?
 feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
 tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
@@ -234,8 +244,18 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
         self.tag_focus = self.create_tag("focus", foreground="#000000")
 
-        self.tag_heading = self.create_tag("heading", weight=pango.WEIGHT_BOLD,
+        self.tag_heading1 = self.create_tag("heading1", weight=pango.WEIGHT_BOLD,
+            left_margin=30)
+        self.tag_heading2 = self.create_tag("heading2", weight=pango.WEIGHT_BOLD,
+            left_margin=40)
+        self.tag_heading3 = self.create_tag("heading3", weight=pango.WEIGHT_BOLD,
             left_margin=50)
+        self.tag_heading4 = self.create_tag("heading4", weight=pango.WEIGHT_BOLD,
+            left_margin=60)
+        self.tag_heading5 = self.create_tag("heading5", weight=pango.WEIGHT_BOLD,
+            left_margin=70)
+        self.tag_heading6 = self.create_tag("heading6", weight=pango.WEIGHT_BOLD,
+            left_margin=80)
 
         self.tag_mytable = self.create_tag("mytable", left_margin=110)
 
@@ -316,7 +336,7 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
                 # Forward until start of match
                 mstart.forward_chars(result_start.start())
 
-                if pattern_tagn == 'heading' or pattern_tagn == 'mytable':
+                if pattern_tagn.startswith('heading') or pattern_tagn == 'mytable':
                     # No need to search here. Just match 'til end
                     mend = mstart.copy()
                     mend.forward_line()
