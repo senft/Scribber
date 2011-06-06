@@ -186,6 +186,9 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
         self.tag_mytable = self.create_tag("mytable", left_margin=110,
             pixels_above_lines=20, pixels_below_lines=20)
 
+        self.tag_bold = self.create_tag("DEFAULT", weight=pango.WEIGHT_NORMAL,
+            style=pango.STYLE_NORMAL)
+
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
         self.tag_bolditalic = self.create_tag("bolditalic",
@@ -220,12 +223,14 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
         if end is None: end = self.get_end_iter()
 
         finished = False
+
+        applied_tag = False
+
         while not finished:
-            
             tagn, mstart, mend, length = self._get_first_pattern(start, end)
 
-            print "\n---------------------------------------------------------"
-            print "************** Searching in: ", start.get_text(end)
+            print "\n\n---------------------------------------------------------"
+#            print "************** Searching in: ", start.get_text(end)
 
             if not tagn:
                 # Found no pattern
@@ -235,10 +240,10 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                 # Found a pattern
                 tag = self.get_tag_table().lookup(tagn)
 
-                print "Found pattern: ", start.get_text(end)
+                print "Found pattern: ", mstart.get_text(mend)
 
                 # TODO: +1 universal?
-                if mstart.get_offset() + 1 in used_iters:
+                if mstart.get_offset()  in used_iters:
                     print "************** Skip iterator (start iter was used)"
                     start = mstart
                     start.forward_chars(length)
@@ -248,6 +253,8 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                     print "************** Skip iterator (end iter was used)"
                     start = mstart
                     start.forward_chars(length)
+                    # TODO Wrong! Dont use end-iter right away.. maybe we find
+                    # the real end... though this seems to make things right
                     mend = self.get_end_iter()
                     continue
 
@@ -257,17 +264,18 @@ tellus sed odio facilisis euismod. Mauris a elit libero, a gravida ligula. Nam\
                         self.remove_tag_by_name(p[0], start, mstart) 
                     start = mstart
                     start.forward_chars(length)
+                    applied_tag = True
                     continue
 
-                # Instead of self.remove_all_tags(start, end) only remove
-                # tags that dont alter color (only markdown tags)
-                for p in self.patterns:
-                    self.remove_tag_by_name(p[0], mstart, end) 
-
+                # Only remove old markdown tags (no hilight tags)
+                if not applied_tag:
+                    for p in self.patterns:
+                        self.remove_tag_by_name(p[0], mstart, end) 
                 print "************** Removed tags in: ", mstart.get_text(end)
 
                 print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
                 self.apply_tag_by_name(tagn, mstart, mend)
+                applied_tag = True
 
                 used_iters.append(mstart.get_offset())
                 used_iters.append(mend.get_offset())
