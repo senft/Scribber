@@ -240,6 +240,8 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
+        self.connect('apply-tag', self._on_apply_tag)
+        
 
         self.tag_default = self.create_tag("default", foreground="#888888")
 
@@ -267,7 +269,16 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
 
 
+        self._apply_tags = True
         self._update_markdown(self.get_start_iter())
+        self._apply_tags = False
+
+    def _on_apply_tag(self, buf, tag, start, end):
+        # FIXME This is a hack! It allows apply-tag only while
+        #       _on_insert_text() and _on_delete_range()
+        if not self._apply_tags:
+            self.emit_stop_by_name('apply-tag')
+            return True
 
     def _on_insert_text(self, buf, iter, text, length):
         if iter.has_tag(self.tag_table_default) and text == "\n":
@@ -275,10 +286,14 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         if iter.has_tag(self.tag_table_sorted) and text == "\n":
             self.insert_at_cursor("\d ")
 
+        self._apply_tags = True
         self._update_markdown(self.get_start_iter())
+        self._apply_tags = False
 
     def _on_delete_range(self, buf, start, end):
+        self._apply_tags = True
         self._update_markdown(self.get_start_iter())
+        self._apply_tags = False
 
     def _update_markdown(self, start, end=None):
         # Used to save which iters we already used as start or end of a pattern
@@ -368,6 +383,8 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
     def _focus_current_sentence(self):
         """ Applys a highlighting tag to the sentence the cursor is on """
 
+        self._apply_tags = True
+
         if self.focus:# and not self.get_has_selection():
             cursor_iter = self.get_iter_at_mark(self.get_insert())
 
@@ -396,6 +413,7 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
                 self.apply_tag_by_name("default", start, end)
                 self.apply_tag_by_name("focus", mstart, mend)
 
+            self._apply_tags = False
             return mstart
 
 
