@@ -165,7 +165,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
     def __init__(self):
         gtk.TextBuffer.__init__(self)
 
-        self.set_text("""# Ab geht die Post\nLorem ipsum dolor sit amet, \
+        self.set_text("""\n# Ab geht die Post\nLorem ipsum dolor sit amet, \
 elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
@@ -177,11 +177,12 @@ feugiat erat dignissim. Aliquam *tempus*, quam non suscipit varius, ligula quam 
 elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
 feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus **vulputate** pharetra lorem lobortis. Phasellus eget \
-tellus sed odio facilisis euismod. Mauris a elit libero.\n
+tellus sed odio facilisis euismod. Mauris a elit libero.
+
 * Numero One
 * Zwei
 * Drei
-\n gravida ligula. \
+
 Nam elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi *dignissim ultrices velit*, posuere accumsan \
@@ -194,7 +195,10 @@ elementum orci, vitae *euismod lectus nulla non mauris. Proin rutrum massa \
 feugiat sem scelerisque **imperdiet** laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
 tellus sed odio facilisis* euismod. Mauris a elit libero, a gravida ligula. Nam\
-elit.\n\n# Ich bin total aufgeregt \n Ut sit amet diam mauris. Fusce ac erat \
+elit.
+
+# Ich bin total aufgeregt
+Ut sit amet diam mauris. Fusce ac erat \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
@@ -231,7 +235,7 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         self.tag_focus = self.create_tag("focus", foreground="#000000")
 
         self.tag_heading = self.create_tag("heading", weight=pango.WEIGHT_BOLD,
-            left_margin=50, pixels_above_lines=15, pixels_below_lines=10)
+            left_margin=50)
 
         self.tag_mytable = self.create_tag("mytable", left_margin=110)
 
@@ -341,31 +345,35 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         """ Applys a highlighting tag to the sentence the cursor is on """
 
         if self.focus:# and not self.get_has_selection():
+            cursor_iter = self.get_iter_at_mark(self.get_insert())
 
-            # TODO: get_start_iter().has_tag("table") -> hilight whole table
+            starts_sentence = cursor_iter.starts_sentence()
+            inside_sentence = cursor_iter.inside_sentence()
+            ends_sentence = cursor_iter.ends_sentence()
 
             start = self.get_start_iter()
             end = self.get_end_iter()
 
-            sentence_start = self.get_iter_at_mark(self.get_insert())
-            sentence_start.backward_sentence_start()
+            mstart = cursor_iter.copy()
+            mend = cursor_iter.copy()
 
-            sentence_end = self.get_iter_at_mark(self.get_insert())
-            sentence_end.forward_sentence_end()
-
-            self.apply_tag_by_name("default", start, end)
             self.remove_tag_by_name("focus", start, end)
-            self.apply_tag_by_name("focus", sentence_start, sentence_end)
 
-        return sentence_start
+            if starts_sentence or inside_sentence or ends_sentence:
+                if cursor_iter.has_tag(self.tag_mytable):
+                    # Hilight current table
+                    mstart.backward_to_tag_toggle(self.tag_mytable)
+                    mend.forward_to_tag_toggle(self.tag_mytable)
+                else:
+                    # Hilight current sentence
+                    if not starts_sentence: mstart.backward_sentence_start()
+                    if not ends_sentence: mend.forward_sentence_end()
 
+                self.apply_tag_by_name("default", start, end)
+                self.apply_tag_by_name("focus", mstart, mend)
 
-            # Set normal style for whole text
-#            self.apply_tag_by_name("default", start, end)
-#
-#            # Remove from currently hilighted sentence
-#            self.remove_tag_by_name("default", sentence_start, sentence_end)
-#            self.apply_tag_by_name("focus", sentence_start, sentence_end)
+            return mstart
+
 
 if __name__ == '__main__':
     ScribberView()
