@@ -9,13 +9,13 @@
 
 """
 
-# TODO: Spellcheck when exporting (?) gtkspell
-
 import pygtk
 pygtk.require('2.0')
 import gtk
 import pango
 import re
+import markdown2
+import ho.pisa as pisa
 
 
 class ScribberView(gtk.Window):
@@ -31,19 +31,22 @@ class ScribberView(gtk.Window):
         self.resize(300, 100)
 
         # Callbacks
-        self.connect("delete_event", self.delete_event)
+        self.connect("delete_event", self._delete_event)
         self.connect("destroy", self.destroy)
-        self.connect("window-state-event", self.on_window_state_event)
+        self.connect("window-state-event", self._on_window_state_event)
 
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
-        vbox = gtk.VBox(False, 0)
+        vbox = gtk.VBox(False, 2)
         self.add(vbox)
+
+        menu_bar = self.create_menu_bar()
+        vbox.pack_start(menu_bar, False, False, 0)
 
         # TextView
         self.view = ScribberTextView()
-        vbox.pack_start(scrolled_window, True, True, 2)
+        vbox.pack_start(scrolled_window, True, True, 0)
 
         scrolled_window.add_with_viewport(self.view)
 
@@ -58,31 +61,102 @@ class ScribberView(gtk.Window):
         self.button_focus.set_image(
             gtk.image_new_from_file("system-search.png"))
         self.button_focus.set_active(True)
-        self.button_focus.connect("clicked", self.on_focus_click)
+        self.button_focus.connect("clicked", self._on_focus_click)
         self.button_fullscreen = gtk.ToggleButton("Fullscreen")
         self.button_fullscreen.set_image(
             gtk.image_new_from_file("view-fullscreen.png"))
-        self.button_fullscreen.connect("clicked", self.on_fullscreen_click)
+        self.button_fullscreen.connect("clicked", self._on_fullscreen_click)
 
         sbar_wc = gtk.Statusbar()
         context_id = sbar_wc.get_context_id("main_window")
 
         sbar_wc.push(context_id, "wc")
 
-        self.sbarbox.pack_start(self.button_focus, False, False, 2)
-        self.sbarbox.pack_start(self.button_fullscreen, False, False, 2)
-        self.sbarbox.pack_end(sbar_wc, True, True, 2)
+        self.sbarbox.pack_start(self.button_focus, False, False, 0)
+        self.sbarbox.pack_start(self.button_fullscreen, False, False, 0)
+        self.sbarbox.pack_end(sbar_wc, True, True, 0)
 
-        vbox.pack_end(self.sbarbox, False, False, 2)
+        vbox.pack_end(self.sbarbox, False, False, 0)
 
         # Go!
         self.show_all()
         gtk.main()
 
-    def on_focus_click(self, widget, data=None):
-        self.view.get_buffer().focus = self.view.get_buffer().focus
+    def save(self):
+        css = """
+@page {
+  @frame {
+    margin: 2cm;
+  }
+}"""
+        text = self.view.get_buffer().get_start_iter().get_text(self.view.get_buffer().get_end_iter())
+        text = markdown2.Markdown().convert(text)
+        text = ''.join(['<div><pdf:toc /></div><pdf:nextpage />', text])
 
-    def on_fullscreen_click(self, widget, data=None):
+        with open('html.tmp', 'w+') as f:
+            f.write(text)
+
+        filename = "out.pdf"
+        pdf = pisa.CreatePDF(file('html.tmp', 'r'), file(filename, "wb"))#, default_css=css)
+
+        print pdf
+        print pdf.err
+
+    def create_menu_bar(self):
+        menu_bar = gtk.MenuBar()
+
+        filemenu = gtk.Menu()
+        filem = gtk.MenuItem("_File")
+        filem.set_submenu(filemenu)
+       
+        agr = gtk.AccelGroup()
+        self.add_accel_group(agr)
+
+        newi = gtk.ImageMenuItem(gtk.STOCK_NEW, agr)
+        key, mod = gtk.accelerator_parse("<Control>N")
+        newi.add_accelerator("activate", agr, key, 
+            mod, gtk.ACCEL_VISIBLE)
+        filemenu.append(newi)
+
+        savem = gtk.ImageMenuItem(gtk.STOCK_SAVE)
+        key, mod = gtk.accelerator_parse("<Control>S")
+        savem.add_accelerator("activate", agr, key, 
+            mod, gtk.ACCEL_VISIBLE)
+        savem.connect('activate', self._on_savem)
+        filemenu.append(savem)
+
+        openm = gtk.ImageMenuItem(gtk.STOCK_OPEN, agr)
+        key, mod = gtk.accelerator_parse("<Control>O")
+        openm.add_accelerator("activate", agr, key, 
+            mod, gtk.ACCEL_VISIBLE)
+        filemenu.append(openm)
+
+        filemenu.append(gtk.SeparatorMenuItem())
+
+        exit = gtk.ImageMenuItem(gtk.STOCK_QUIT, agr)
+        key, mod = gtk.accelerator_parse("<Control>Q")
+        exit.add_accelerator("activate", agr, key, 
+            mod, gtk.ACCEL_VISIBLE)
+
+        exit.connect("activate", gtk.main_quit)
+        
+        filemenu.append(exit)
+
+        menu_bar.append(filem)
+
+        return menu_bar
+
+    def _on_savem(self, data=None):
+        self.save()
+
+    def _on_focus_click(self, widget, data=None):
+        if self.view.focus:
+            self.view.get_buffer().stop_focus()
+        else:
+            self.view.get_buffer()._focus_current_sentence()
+        self.view.focus = not self.view.focus
+
+    def _on_fullscreen_click(self, widget, data=None):
         if self.is_fullscreen:
             self.unfullscreen()
             # Gtk doesnt provied a way to check a windows state, so we have to
@@ -92,7 +166,7 @@ class ScribberView(gtk.Window):
             self.fullscreen()
             self.is_fullscreen = True
 
-    def on_window_state_event(self, event, data=None):
+    def _on_window_state_event(self, event, data=None):
         if data.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
             self.button_fullscreen.set_active(True)
             self.is_fullscreen = True
@@ -100,7 +174,7 @@ class ScribberView(gtk.Window):
             self.button_fullscreen.set_active(False)
             self.is_fullscreen = False
 
-    def delete_event(self, widget, event, data=None):
+    def _delete_event(self, widget, event, data=None):
         # Really quit?
         return False
 
@@ -120,6 +194,8 @@ class ScribberTextView(gtk.TextView):
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
 
+        self.connect('size-request', self._on_resize)
+
         # http://www.tortall.net/mu/wiki/PyGTKCairoTutorial
         font = pango.FontDescription("envy code r 12")
         self.modify_font(font)
@@ -137,6 +213,8 @@ class ScribberTextView(gtk.TextView):
         # Line spacing
         self.set_pixels_inside_wrap(7)
 
+        self.focus = True
+
         self._focus_current_sentence()
 
     def _on_move_cursor(self, widget, event, data=None, asd=None):
@@ -148,10 +226,15 @@ class ScribberTextView(gtk.TextView):
     def _on_button_event(self, widget, event, data=None):
         self._focus_current_sentence()
 
+    def _on_resize(self, requisition, data=None):
+        #print self.get_allocation()
+        pass
+
     def _focus_current_sentence(self):
         # TODO: Scroll doesnt work
-        sentence_start = self.get_buffer()._focus_current_sentence()
-        self.scroll_to_iter(sentence_start, 0, True, 0.0, 0.0)
+        if self.focus:
+            sentence_start = self.get_buffer()._focus_current_sentence()
+            self.scroll_to_iter(sentence_start, 0, True, 0.0, 0.0)
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
@@ -236,8 +319,6 @@ tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
  vel nisi eget tortor sodales dictum.""")
 
-        self.focus = True
-
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
         self.connect('apply-tag', self._on_apply_tag)
@@ -266,7 +347,6 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
         self.tag_bolditalic = self.create_tag("bolditalic",
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
-
 
         self._apply_tags = True
         self._update_markdown(self.get_start_iter())
@@ -375,37 +455,42 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
         self._apply_tags = True
 
-        if self.focus:# and not self.get_has_selection():
-            cursor_iter = self.get_iter_at_mark(self.get_insert())
+        cursor_iter = self.get_iter_at_mark(self.get_insert())
 
-            starts_sentence = cursor_iter.starts_sentence()
-            inside_sentence = cursor_iter.inside_sentence()
-            ends_sentence = cursor_iter.ends_sentence()
+        starts_sentence = cursor_iter.starts_sentence()
+        inside_sentence = cursor_iter.inside_sentence()
+        ends_sentence = cursor_iter.ends_sentence()
 
-            start = self.get_start_iter()
-            end = self.get_end_iter()
+        start = self.get_start_iter()
+        end = self.get_end_iter()
 
-            mstart = cursor_iter.copy()
-            mend = cursor_iter.copy()
+        mstart = cursor_iter.copy()
+        mend = cursor_iter.copy()
 
-            self.remove_tag_by_name("focus", start, end)
+        self.remove_tag_by_name("focus", start, end)
 
-            if starts_sentence or inside_sentence or ends_sentence:
-                if cursor_iter.has_tag(self.tag_table_default):
-                    # Hilight current table
-                    mstart.backward_to_tag_toggle(self.tag_table_default)
-                    mend.forward_to_tag_toggle(self.tag_table_default)
-                else:
-                    # Hilight current sentence
-                    if not starts_sentence: mstart.backward_sentence_start()
-                    if not ends_sentence: mend.forward_sentence_end()
+        if starts_sentence or inside_sentence or ends_sentence:
+            if cursor_iter.has_tag(self.tag_table_default):
+                # Hilight current table
+                mstart.backward_to_tag_toggle(self.tag_table_default)
+                mend.forward_to_tag_toggle(self.tag_table_default)
+            else:
+                # Hilight current sentence
+                if not starts_sentence: mstart.backward_sentence_start()
+                if not ends_sentence: mend.forward_sentence_end()
 
-                self.apply_tag_by_name("default", start, end)
-                self.apply_tag_by_name("focus", mstart, mend)
+            self.apply_tag_by_name("default", start, end)
+            self.apply_tag_by_name("focus", mstart, mend)
 
-            self._apply_tags = False
-            return mstart
+        self._apply_tags = False
+        return mstart
 
+    def stop_focus(self):
+        start = self.get_start_iter()
+        end = self.get_end_iter()
+        self.remove_tag_by_name("default", start, end)
+        self.apply_tag_by_name("focus", start, end)
 
 if __name__ == '__main__':
+    pisa.showLogging()
     ScribberView()
