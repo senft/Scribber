@@ -36,7 +36,7 @@ class ScribberView(gtk.Window):
         self.connect("window-state-event", self.on_window_state_event)
 
         scrolled_window = gtk.ScrolledWindow()
-        scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_AUTOMATIC)
+        scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 
         vbox = gtk.VBox(False, 0)
         self.add(vbox)
