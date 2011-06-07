@@ -156,14 +156,14 @@ class ScribberTextView(gtk.TextView):
 
 class ScribberTextBuffer(gtk.TextBuffer):
 
-    patterns = [ ['heading1', re.compile('\#(?!\#) '), re.compile(''), 1],
-                 ['heading2', re.compile('\#{2}(?!\#) '), re.compile(''), 1],
-                 ['heading3', re.compile('\#{3}(?!\#) '), re.compile(''), 1],
-                 ['heading4', re.compile('\#{4}(?!\#) '), re.compile(''), 1],
-                 ['heading5', re.compile('\#{5}(?!\#) '), re.compile(''), 1],
-                 ['heading6', re.compile('\#{6} '), re.compile(''), 1],
-                 ['table_default', re.compile('\* '), re.compile(''), 1],
-                 ['table_sorted', re.compile('\d+\. '), re.compile(''), 1],
+    patterns = [ ['heading1', re.compile('\#(?!\#) '), re.compile('\n'), 1],
+                 ['heading2', re.compile('\#{2}(?!\#) '), re.compile('\n'), 1],
+                 ['heading3', re.compile('\#{3}(?!\#) '), re.compile('\n'), 1],
+                 ['heading4', re.compile('\#{4}(?!\#) '), re.compile('\n'), 1],
+                 ['heading5', re.compile('\#{5}(?!\#) '), re.compile('\n'), 1],
+                 ['heading6', re.compile('\#{6} '), re.compile('\n'), 1],
+                 ['table_default', re.compile('\* '), re.compile('\n'), 1],
+                 ['table_sorted', re.compile('\d+\. '), re.compile('\n'), 1],
                  ['italic', re.compile('(?<!\*)(\*\w)'),
                    re.compile('(\w\*)(?!\*)'), 1],
                  ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2] ]
@@ -242,7 +242,6 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         self.connect_after("delete-range", self._on_delete_range)
         self.connect('apply-tag', self._on_apply_tag)
         
-
         self.tag_default = self.create_tag("default", foreground="#888888")
 
         self.tag_focus = self.create_tag("focus", foreground="#000000")
@@ -354,15 +353,6 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
                 # Forward until start of match
                 mstart.forward_chars(result_start.start())
-
-                if pattern_tagn.startswith('heading') or pattern_tagn == 'table_default':
-                    # No need to search here. Just match 'til end
-                    mend = mstart.copy()
-                    mend.forward_line()
-                    matches.append([result_start.start(), [pattern_tagn, mstart,
-                    mend, pattern[3]]])
-                    continue
-
 
                 # Match end
                 result_end = pattern_end.search(mstart.get_text(end))
