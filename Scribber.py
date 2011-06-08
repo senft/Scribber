@@ -2,11 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
+Scribber, a text editor that focuses on minimalism.
 
-    Scribber, a text editor that focuses on minimalism
-
-    Icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
-
+Icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
 """
 
 import pygtk
