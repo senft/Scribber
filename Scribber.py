@@ -83,24 +83,13 @@ class ScribberView(gtk.Window):
         gtk.main()
 
     def save(self):
-        css = """
-@page {
-  @frame {
-    margin: 2cm;
-  }
-}"""
         text = self.view.get_buffer().get_start_iter().get_text(self.view.get_buffer().get_end_iter())
         text = markdown2.Markdown().convert(text)
-        text = ''.join(['<div><pdf:toc /></div><pdf:nextpage />', text])
+        text = ''.join(['<div><pdf:toc /></div>\n<div><pdf:nextpage /></div>\n', text])
 
-        with open('html.tmp', 'w+') as f:
-            f.write(text)
+        with open('html.tmp', 'w+') as f: f.write(text)
 
-        filename = "out.pdf"
-        pdf = pisa.CreatePDF(file('html.tmp', 'r'), file(filename, "wb"))#, default_css=css)
-
-        print pdf
-        print pdf.err
+        pisa.CreatePDF(file('html.tmp', 'r'), file("out.pdf", "wb"), default_css=open('style.css', 'rb').read()) 
 
     def create_menu_bar(self):
         menu_bar = gtk.MenuBar()
@@ -108,9 +97,19 @@ class ScribberView(gtk.Window):
         filemenu = gtk.Menu()
         filem = gtk.MenuItem("_File")
         filem.set_submenu(filemenu)
-       
+
+        qmenu = gtk.Menu()
+        qm = gtk.MenuItem("_Help")
+        qm.set_submenu(qmenu)
+
         agr = gtk.AccelGroup()
         self.add_accel_group(agr)
+
+        helpm = gtk.ImageMenuItem(gtk.STOCK_HELP, agr)
+        qmenu.append(helpm)
+
+        aboutm = gtk.ImageMenuItem(gtk.STOCK_ABOUT, agr)
+        qmenu.append(aboutm)
 
         newi = gtk.ImageMenuItem(gtk.STOCK_NEW, agr)
         key, mod = gtk.accelerator_parse("<Control>N")
@@ -143,6 +142,7 @@ class ScribberView(gtk.Window):
         filemenu.append(exit)
 
         menu_bar.append(filem)
+        menu_bar.append(qm)
 
         return menu_bar
 
@@ -197,7 +197,7 @@ class ScribberTextView(gtk.TextView):
         self.connect('size-request', self._on_resize)
 
         # http://www.tortall.net/mu/wiki/PyGTKCairoTutorial
-        font = pango.FontDescription("envy code r 12")
+        font = pango.FontDescription("dejavu sans 12")
         self.modify_font(font)
 
         # Wrap mode
