@@ -12,7 +12,7 @@ pygtk.require('2.0')
 import gtk
 import pango
 import re
-import subprocess
+import ReSTExporter
 
 class ScribberView(gtk.Window):
     def __init__(self):
@@ -74,15 +74,14 @@ class ScribberView(gtk.Window):
 
         vbox.pack_end(self.sbarbox, False, False, 0)
 
+        self.exporter = ReSTExporter.ReSTExporter(self.view.get_buffer())
+
         # Go!
         self.show_all()
         gtk.main()
 
     def save(self):
-        text = self.view.get_buffer().get_start_iter().get_text(self.view.get_buffer().get_end_iter())
-        with open('out.rst', 'w+') as f: f.write(text)
-        subprocess.Popen('rst2latex out.rst out.tex', shell=True)
-        subprocess.Popen('pdflatex out.tex', shell=True)
+        self.exporter.to_pdf('asd')
 
 
     def create_menu_bar(self):
@@ -251,10 +250,10 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.set_text("""
 # Ab geht die Post
 Lorem ipsum dolor sit amet, \
-elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
+elit. Ut sit amet diam mauris. Fusce ac ***erat***, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
-tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
-leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
+tempus leo. Nulla facilisi. Morbi di**gn**issim ul*tr*ices velit, posuere accumsan \
+leo vehicula eget. Mauris at urna e***ge***t arcu vulputate feugiat nec id nunc. \
 Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
 sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
 fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
