@@ -12,9 +12,7 @@ pygtk.require('2.0')
 import gtk
 import pango
 import re
-import markdown2
-import ho.pisa as pisa
-
+import subprocess
 
 class ScribberView(gtk.Window):
     def __init__(self):
@@ -82,12 +80,10 @@ class ScribberView(gtk.Window):
 
     def save(self):
         text = self.view.get_buffer().get_start_iter().get_text(self.view.get_buffer().get_end_iter())
-        text = markdown2.Markdown().convert(text)
-        text = ''.join(['<div><pdf:toc /></div>\n<div><pdf:nextpage /></div>\n', text])
+        with open('out.rst', 'w+') as f: f.write(text)
+        subprocess.Popen('rst2latex out.rst out.tex', shell=True)
+        subprocess.Popen('pdflatex out.tex', shell=True)
 
-        with open('html.tmp', 'w+') as f: f.write(text)
-
-        pisa.CreatePDF(file('html.tmp', 'r'), file("out.pdf", "wb"), default_css=open('style.css', 'rb').read()) 
 
     def create_menu_bar(self):
         menu_bar = gtk.MenuBar()
@@ -490,5 +486,4 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         self.apply_tag_by_name("focus", start, end)
 
 if __name__ == '__main__':
-    pisa.showLogging()
     ScribberView()
