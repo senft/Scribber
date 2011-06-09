@@ -19,7 +19,10 @@ class ScribberView(gtk.Window):
         gtk.Window.__init__(self)
         gtk.rc_parse(".gtkrc")
 
+        self.view = ScribberTextView()
         self.is_fullscreen = False
+        self.filename = None
+        self.exporter = ReSTExporter.ReSTExporter(self.view.get_buffer())
 
         self.set_title("Scribber")
         self.set_border_width(2)
@@ -33,82 +36,77 @@ class ScribberView(gtk.Window):
 
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-
+        scrolled_window.add_with_viewport(self.view)
         vbox = gtk.VBox(False, 2)
         self.add(vbox)
 
         menu_bar = self.create_menu_bar()
         vbox.pack_start(menu_bar, False, False, 0)
-
-        # TextView
-        self.view = ScribberTextView()
         vbox.pack_start(scrolled_window, True, True, 0)
-
-        scrolled_window.add_with_viewport(self.view)
 
         #check = gtkspell.Spell(view)
         #check.set_language("de_DE")
 
-        # Statusbar
-        self.sbarbox = gtk.HBox(False, 0)
-
-        # Buttons
-        self.button_focus = gtk.ToggleButton("Focus")
-        self.button_focus.set_image(
-            gtk.image_new_from_file("system-search.png"))
-        self.button_focus.set_active(True)
-        self.button_focus.connect("clicked", self._on_focus_click)
-        self.button_fullscreen = gtk.ToggleButton("Fullscreen")
-        self.button_fullscreen.set_image(
-            gtk.image_new_from_file("view-fullscreen.png"))
-        self.button_fullscreen.connect("clicked", self._on_fullscreen_click)
-
-        sbar_wc = gtk.Statusbar()
-        context_id = sbar_wc.get_context_id("main_window")
-
-        sbar_wc.push(context_id, "wc")
-
-        self.sbarbox.pack_start(self.button_focus, False, False, 0)
-        self.sbarbox.pack_start(self.button_fullscreen, False, False, 0)
-        self.sbarbox.pack_end(sbar_wc, True, True, 0)
-
-        vbox.pack_end(self.sbarbox, False, False, 0)
-
-        self.exporter = ReSTExporter.ReSTExporter(self.view.get_buffer())
+        statusbar = self.create_status_bar()
+        vbox.pack_end(statusbar, False, False, 0)
 
         # Go!
         self.show_all()
         gtk.main()
 
     def save(self):
-        self.exporter.to_pdf('asd')
+        if not self.filename:
+            self.save_as()
+        else:
+            self.exporter.to_plan_text(self.filename)
 
+    def save_as(self):
+        chooser = gtk.FileChooserDialog(title='Save...',
+                action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
+                gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        response = chooser.run()
+        if response == gtk.RESPONSE_OK:
+            print 'Save as: ', chooser.get_filename()
+            self.filename = chooser.get_filename()
+            self.exporter.to_plan_text(chooser.get_filename())
+        elif response == gtk.RESPONSE_CANCEL:
+            print 'Closed, no file selected'
+
+        chooser.destroy()
+
+
+    def open(self):
+        chooser = gtk.FileChooserDialog(title='Open...',
+                action=gtk.FILE_CHOOSER_ACTION_OPEN, buttons=(gtk.STOCK_CANCEL,
+                gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+
+        response = chooser.run()
+        if response == gtk.RESPONSE_OK:
+            print 'Open: ', chooser.get_filename()
+        elif response == gtk.RESPONSE_CANCEL:
+            print 'Closed, no file selected'
+
+        chooser.destroy()
 
     def create_menu_bar(self):
         menu_bar = gtk.MenuBar()
 
+        agr = gtk.AccelGroup()
+        self.add_accel_group(agr)
+
+        # File menu
         filemenu = gtk.Menu()
         filem = gtk.MenuItem("_File")
         filem.set_submenu(filemenu)
 
-        qmenu = gtk.Menu()
-        qm = gtk.MenuItem("_Help")
-        qm.set_submenu(qmenu)
-
-        agr = gtk.AccelGroup()
-        self.add_accel_group(agr)
-
-        helpm = gtk.ImageMenuItem(gtk.STOCK_HELP, agr)
-        qmenu.append(helpm)
-
-        aboutm = gtk.ImageMenuItem(gtk.STOCK_ABOUT, agr)
-        qmenu.append(aboutm)
-
         newi = gtk.ImageMenuItem(gtk.STOCK_NEW, agr)
-        key, mod = gtk.accelerator_parse("<Control>N")
-        newi.add_accelerator("activate", agr, key, 
-            mod, gtk.ACCEL_VISIBLE)
         filemenu.append(newi)
+
+        openm = gtk.ImageMenuItem(gtk.STOCK_OPEN, agr)
+        filemenu.append(openm)
+
+        filemenu.append(gtk.SeparatorMenuItem())
 
         savem = gtk.ImageMenuItem(gtk.STOCK_SAVE)
         key, mod = gtk.accelerator_parse("<Control>S")
@@ -117,30 +115,110 @@ class ScribberView(gtk.Window):
         savem.connect('activate', self._on_savem)
         filemenu.append(savem)
 
-        openm = gtk.ImageMenuItem(gtk.STOCK_OPEN, agr)
-        key, mod = gtk.accelerator_parse("<Control>O")
-        openm.add_accelerator("activate", agr, key, 
+        saveasm = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS)
+        key, mod = gtk.accelerator_parse("<Control><Shift>S")
+        saveasm.add_accelerator("activate", agr, key, 
             mod, gtk.ACCEL_VISIBLE)
-        filemenu.append(openm)
+        saveasm.connect('activate', self._on_saveasm)
+        filemenu.append(saveasm)
+
+        filemenu.append(gtk.SeparatorMenuItem())
+
+        exportm = gtk.MenuItem("Expor_t...", True)
+        filemenu.append(exportm)
 
         filemenu.append(gtk.SeparatorMenuItem())
 
         exit = gtk.ImageMenuItem(gtk.STOCK_QUIT, agr)
-        key, mod = gtk.accelerator_parse("<Control>Q")
-        exit.add_accelerator("activate", agr, key, 
-            mod, gtk.ACCEL_VISIBLE)
-
         exit.connect("activate", gtk.main_quit)
-        
         filemenu.append(exit)
 
+        # Edit menu
+        editmenu = gtk.Menu()
+        editm = gtk.MenuItem("_Edit")
+        editm.set_submenu(editmenu)
+
+        undom = gtk.ImageMenuItem(gtk.STOCK_UNDO, agr)
+        key, mod = gtk.accelerator_parse("<Control>Z")
+        undom.add_accelerator("activate", agr, key, 
+            mod, gtk.ACCEL_VISIBLE)
+        editmenu.append(undom)
+
+        redom = gtk.ImageMenuItem(gtk.STOCK_REDO, agr)
+        key, mod = gtk.accelerator_parse("<Control>Y")
+        redom.add_accelerator("activate", agr, key, 
+            mod, gtk.ACCEL_VISIBLE)
+        editmenu.append(redom)
+
+        editmenu.append(gtk.SeparatorMenuItem())
+
+        cutm = gtk.ImageMenuItem(gtk.STOCK_CUT, agr)
+        editmenu.append(cutm)
+
+        copym = gtk.ImageMenuItem(gtk.STOCK_COPY, agr)
+        editmenu.append(copym)
+
+        pastem = gtk.ImageMenuItem(gtk.STOCK_PASTE, agr)
+        editmenu.append(pastem)
+
+        deletem = gtk.ImageMenuItem(gtk.STOCK_DELETE, agr)
+        editmenu.append(deletem)
+
+        editmenu.append(gtk.SeparatorMenuItem())
+
+        findm = gtk.ImageMenuItem(gtk.STOCK_FIND, agr)
+        editmenu.append(findm)
+
+        findreplacem = gtk.ImageMenuItem(gtk.STOCK_FIND_AND_REPLACE, agr)
+        editmenu.append(findreplacem)
+
+        # Help menu
+        qmenu = gtk.Menu()
+        qm = gtk.MenuItem("_Help")
+        qm.set_submenu(qmenu)
+
+        helpm = gtk.ImageMenuItem(gtk.STOCK_HELP, agr)
+        qmenu.append(helpm)
+
+        aboutm = gtk.ImageMenuItem(gtk.STOCK_ABOUT, agr)
+        qmenu.append(aboutm)
+
+        # Add stuff
         menu_bar.append(filem)
+        menu_bar.append(editm)
         menu_bar.append(qm)
 
         return menu_bar
 
+    def create_status_bar(self):
+        sbarbox = gtk.HBox(False, 0)
+
+        # Buttons
+        self.button_focus = gtk.ToggleButton("Focus")
+        self.button_focus.set_image(gtk.image_new_from_file("system-search.png"))
+        self.button_focus.set_active(True)
+        self.button_focus.connect("clicked", self._on_focus_click)
+        self.button_fullscreen = gtk.ToggleButton("Fullscreen")
+        self.button_fullscreen.set_image(
+                gtk.image_new_from_file("view-fullscreen.png"))
+        self.button_fullscreen.connect("clicked", self._on_fullscreen_click)
+
+        sbar_wc = gtk.Statusbar()
+        context_id = sbar_wc.get_context_id("main_window")
+
+        sbar_wc.push(context_id, "wc")
+
+        sbarbox.pack_start(self.button_focus, False, False, 0)
+        sbarbox.pack_start(self.button_fullscreen, False, False, 0)
+        sbarbox.pack_end(sbar_wc, True, True, 0)
+
+        return sbarbox
+
     def _on_savem(self, data=None):
         self.save()
+
+    def _on_saveasm(self, data=None):
+        self.save_as()
 
     def _on_focus_click(self, widget, data=None):
         if self.view.focus:
@@ -190,7 +268,7 @@ class ScribberTextView(gtk.TextView):
         self.connect('size-request', self._on_resize)
 
         # http://www.tortall.net/mu/wiki/PyGTKCairoTutorial
-        font = pango.FontDescription("dejavu sans 12")
+        font = pango.FontDescription("dejavu sans mono 12")
         self.modify_font(font)
 
         # Wrap mode
@@ -250,9 +328,9 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.set_text("""
 # Ab geht die Post
 Lorem ipsum dolor sit amet, \
-elit. Ut sit amet diam mauris. Fusce ac ***erat***, ut ultrices ligula. \
+elit. Ut sit a**me**t d**iam ma**uris. Fusce ac ***erat par*** ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
-tempus leo. Nulla facilisi. Morbi di**gn**issim ul*tr*ices velit, posuere accumsan \
+tempus leo. Nulla facilisi. Morbi di**gn**is*si*m ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna e***ge***t arcu vulputate feugiat nec id nunc. \
 Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
 sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \

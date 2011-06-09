@@ -12,28 +12,40 @@ class ReSTExporter():
     def __init__(self, buffer):
         self.buffer = buffer
 
-    def role_fn(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    def role_bolditalic(name, rawtext, text, lineno, inliner, options={}, content=[]):
         node = nodes.emphasis('', '', **options)
         node.append(nodes.strong(rawtext, utils.unescape(text), **options))
         return [node], []
 
-    roles.register_canonical_role('bolditalic', role_fn)
+    roles.register_canonical_role('bolditalic', role_bolditalic)
 
     def extend_rst(self, text):
-        # Convert foo*bar*baz to foo\ *bar*\ baz, because ReST does not allow
-        # emphazising chars in a word
-        text = re.sub('(\w)\*(\w+)\*(\w)', '\\1\\ *\\2*\\ \\3', text)
+        # Convert foo***bar***baz to foo\ ***bar***\ baz, because ReST does not
+        # allow hilight chars in a word
+        text = re.sub('(\w)\*\*\*(.+?)\*\*\*(\w)', '\\1\ :bolditalic:`\\2`\ \\3', text)
+
+        # Convert ***foo*** to :bolditalic:`foo`
+        text = re.sub('\*\*\*(.+?)\*\*\*',':bolditalic:`\\1`', text)
 
         # Convert foo**bar**baz to foo\ **bar**\ baz, because ReST does not
         # allow hilight chars in a word
-        text = re.sub('(\w)\*\*(\w+)\*\*(\w)', '\\1\\ **\\2**\\ \\3', text)
+        text = re.sub('(\w)\*\*(.+?)\*\*(\w)', '\\1\ **\\2**\ \\3', text)
 
-        # Convert ***foo*** to :bolditalic:`foo`
-        text = re.sub('\*\*\*(\w+)\*\*\*',':bolditalic:`\\1`', text)
+        # Convert foo*bar*baz to foo\ *bar*\ baz, because ReST does not allow
+        # emphazising chars in a word
+        text = re.sub('(\w)\*(.+?)\*(\w)', '\\1\ *\\2*\ \\3', text)
 
         # Convert **foo*bar*baz** to **foo*****bar*****baz**, because ReST does
         # not allow nested tags
+        text = re.sub('\*(\w+).\*\*(.+?)\*\*.(\w+)\*','*\\1* ***\\2*** *\\3*', text)
+
         return text
+
+    def to_plan_text(self, filename):
+        text = self.buffer.get_start_iter().get_text( \
+            self.buffer.get_end_iter())
+
+        with open(filename, 'w+') as f: f.write(text)
 
     def to_pdf(self, filename):
         text = self.buffer.get_start_iter().get_text( \
