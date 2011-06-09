@@ -2,7 +2,7 @@ Scribber is a simple text editor that focuses on minimalism.
 
     Some features:
         * Highlithing the current sentence
-        * Realtime Markdown
+        * Realtime WYSIWYG mix of Markdown and ReST
 
 # TODO:
     * Decide wether i want to implement spellcheck or not

@@ -10,6 +10,7 @@ Icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
 import pygtk
 pygtk.require('2.0')
 import gtk
+import os
 import pango
 import re
 import ReSTExporter
@@ -66,15 +67,37 @@ class ScribberView(gtk.Window):
                 gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
         response = chooser.run()
+
         if response == gtk.RESPONSE_OK:
             print 'Save as: ', chooser.get_filename()
             self.filename = chooser.get_filename()
-            self.exporter.to_plan_text(chooser.get_filename())
+            self.exporter.to_plain_text(chooser.get_filename())
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no file selected'
 
         chooser.destroy()
 
+    def export(self):
+        chooser = gtk.FileChooserDialog(title='Export...',
+            action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
+            gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+        response = chooser.run()
+
+        if response == gtk.RESPONSE_OK:
+            filename = chooser.get_filename()
+            print 'Export to: ', filename
+
+            file, ext = os.path.splitext(filename)
+            if ext == '.pdf':
+                self.exporter.to_pdf(file)
+            elif ext == '.odt':
+                self.exporter.to_odt(file)
+
+        elif response == gtk.RESPONSE_CANCEL:
+            print 'Closed, no file selected'
+
+        chooser.destroy()
 
     def open(self):
         chooser = gtk.FileChooserDialog(title='Open...',
@@ -82,6 +105,7 @@ class ScribberView(gtk.Window):
                 gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
 
         response = chooser.run()
+
         if response == gtk.RESPONSE_OK:
             print 'Open: ', chooser.get_filename()
         elif response == gtk.RESPONSE_CANCEL:
@@ -125,6 +149,7 @@ class ScribberView(gtk.Window):
         filemenu.append(gtk.SeparatorMenuItem())
 
         exportm = gtk.MenuItem("Expor_t...", True)
+        exportm.connect('activate', self._on_exportm)
         filemenu.append(exportm)
 
         filemenu.append(gtk.SeparatorMenuItem())
@@ -220,6 +245,9 @@ class ScribberView(gtk.Window):
     def _on_saveasm(self, data=None):
         self.save_as()
 
+    def _on_exportm(self, data=None):
+        self.export()
+
     def _on_focus_click(self, widget, data=None):
         if self.view.focus:
             self.view.get_buffer().stop_focus()
@@ -268,7 +296,7 @@ class ScribberTextView(gtk.TextView):
         self.connect('size-request', self._on_resize)
 
         # http://www.tortall.net/mu/wiki/PyGTKCairoTutorial
-        font = pango.FontDescription("dejavu sans mono 12")
+        font = pango.FontDescription("Bitstream 12")
         self.modify_font(font)
 
         # Wrap mode
@@ -320,7 +348,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
                  ['table_sorted', re.compile('\d+\. '), re.compile('\n'), 1],
                  ['italic', re.compile('(?<!\*)(\*\w)'),
                    re.compile('(\w\*)(?!\*)'), 1],
-                 ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2] ]
+                 ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2],
+                 ['bolditalic', re.compile('\*\*\*\w'), re.compile('\w\*\*\*'), 3] ]
 
     def __init__(self):
         gtk.TextBuffer.__init__(self)
@@ -328,7 +357,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.set_text("""
 # Ab geht die Post
 Lorem ipsum dolor sit amet, \
-elit. Ut sit a**me**t d**iam ma**uris. Fusce ac ***erat par*** ut ultrices ligula. \
+elit. Ut sit a*me*t d**iam ma**uris. Fusce ac ***erat par*** ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
 tempus leo. Nulla facilisi. Morbi di**gn**is*si*m ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna e***ge***t arcu vulputate feugiat nec id nunc. \
@@ -390,6 +419,8 @@ tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
  vel nisi eget tortor sodales dictum.""")
 
+        #self.set_text('ha***ll***o asd*hall ooo*asd ***megakrass***')
+
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
         self.connect('apply-tag', self._on_apply_tag)
@@ -432,8 +463,12 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
     def _on_insert_text(self, buf, iter, text, length):
         if iter.has_tag(self.tag_table_default) and text == "\n":
+            # If line is not empty
             self.insert_at_cursor("* ")
+            # else
+            #   clear line
         if iter.has_tag(self.tag_table_sorted) and text == "\n":
+            # Same
             self.insert_at_cursor("\d ")
 
         self._apply_tags = True
@@ -462,14 +497,12 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
             if tagn:
                 # Found a pattern
-                # TODO: +1 universal?
-                if mstart.get_offset() + 1 in used_iters or \
+                if mstart.get_offset() + length in used_iters or \
                     (mend.get_offset() in used_iters and not mend.equal(end)):
                     start = mstart
                     start.forward_chars(length)
                     continue
 
-                #print "************** Apply tag ", tagn, "to: ",mstart.get_text(mend)
                 self.apply_tag_by_name(tagn, mstart, mend)
 
                 used_iters.append(mstart.get_offset())
