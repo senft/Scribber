@@ -15,6 +15,7 @@ import pango
 import re
 import ReSTExporter
 
+
 class ScribberView(gtk.Window):
     def __init__(self):
         gtk.Window.__init__(self)
@@ -134,14 +135,14 @@ class ScribberView(gtk.Window):
 
         savem = gtk.ImageMenuItem(gtk.STOCK_SAVE)
         key, mod = gtk.accelerator_parse("<Control>S")
-        savem.add_accelerator("activate", agr, key, 
+        savem.add_accelerator("activate", agr, key,
             mod, gtk.ACCEL_VISIBLE)
         savem.connect('activate', self._on_savem)
         filemenu.append(savem)
 
         saveasm = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS)
         key, mod = gtk.accelerator_parse("<Control><Shift>S")
-        saveasm.add_accelerator("activate", agr, key, 
+        saveasm.add_accelerator("activate", agr, key,
             mod, gtk.ACCEL_VISIBLE)
         saveasm.connect('activate', self._on_saveasm)
         filemenu.append(saveasm)
@@ -165,13 +166,13 @@ class ScribberView(gtk.Window):
 
         undom = gtk.ImageMenuItem(gtk.STOCK_UNDO, agr)
         key, mod = gtk.accelerator_parse("<Control>Z")
-        undom.add_accelerator("activate", agr, key, 
+        undom.add_accelerator("activate", agr, key,
             mod, gtk.ACCEL_VISIBLE)
         editmenu.append(undom)
 
         redom = gtk.ImageMenuItem(gtk.STOCK_REDO, agr)
         key, mod = gtk.accelerator_parse("<Control>Y")
-        redom.add_accelerator("activate", agr, key, 
+        redom.add_accelerator("activate", agr, key,
             mod, gtk.ACCEL_VISIBLE)
         editmenu.append(redom)
 
@@ -220,7 +221,8 @@ class ScribberView(gtk.Window):
 
         # Buttons
         self.button_focus = gtk.ToggleButton("Focus")
-        self.button_focus.set_image(gtk.image_new_from_file("system-search.png"))
+        self.button_focus.set_image(
+            gtk.image_new_from_file("system-search.png"))
         self.button_focus.set_active(True)
         self.button_focus.connect("clicked", self._on_focus_click)
         self.button_fullscreen = gtk.ToggleButton("Fullscreen")
@@ -338,18 +340,19 @@ class ScribberTextView(gtk.TextView):
 
 class ScribberTextBuffer(gtk.TextBuffer):
 
-    patterns = [ ['heading1', re.compile('\#(?!\#) '), re.compile('\n'), 1],
-                 ['heading2', re.compile('\#{2}(?!\#) '), re.compile('\n'), 1],
-                 ['heading3', re.compile('\#{3}(?!\#) '), re.compile('\n'), 1],
-                 ['heading4', re.compile('\#{4}(?!\#) '), re.compile('\n'), 1],
-                 ['heading5', re.compile('\#{5}(?!\#) '), re.compile('\n'), 1],
-                 ['heading6', re.compile('\#{6} '), re.compile('\n'), 1],
-                 ['table_default', re.compile('\* '), re.compile('\n'), 1],
-                 ['table_sorted', re.compile('\d+\. '), re.compile('\n'), 1],
-                 ['italic', re.compile('(?<!\*)(\*\w)'),
-                   re.compile('(\w\*)(?!\*)'), 1],
-                 ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2],
-                 ['bolditalic', re.compile('\*\*\*\w'), re.compile('\w\*\*\*'), 3] ]
+    patterns = [['heading1', re.compile('\#(?!\#) '), re.compile('\n'), 1],
+                ['heading2', re.compile('\#{2}(?!\#) '), re.compile('\n'), 1],
+                ['heading3', re.compile('\#{3}(?!\#) '), re.compile('\n'), 1],
+                ['heading4', re.compile('\#{4}(?!\#) '), re.compile('\n'), 1],
+                ['heading5', re.compile('\#{5}(?!\#) '), re.compile('\n'), 1],
+                ['heading6', re.compile('\#{6} '), re.compile('\n'), 1],
+                ['table_default', re.compile('\* '), re.compile('\n'), 1],
+                ['table_sorted', re.compile('\d+\. '), re.compile('\n'), 1],
+                ['italic', re.compile('(?<!\*)(\*\w)'),
+                  re.compile('(\w\*)(?!\*)'), 1],
+                ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2],
+                ['bolditalic', re.compile('\*\*\*\w'),
+                   re.compile('\w\*\*\*'), 3]]
 
     def __init__(self):
         gtk.TextBuffer.__init__(self)
@@ -357,14 +360,14 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.set_text("""
 # Ab geht die Post
 Lorem ipsum dolor sit amet, \
-elit. Ut sit a*me*t d**iam ma**uris. Fusce ac ***erat par*** ut ultrices ligula. \
+elit. Ut sit a*me*t d**iam ma**uris. Fusce ac ***erat par*** ut ultrices. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
-tempus leo. Nulla facilisi. Morbi di**gn**is*si*m ultrices velit, posuere accumsan \
-leo vehicula eget. Mauris at urna e***ge***t arcu vulputate feugiat nec id nunc. \
+tempus leo. Nulla facilis. Morbi di**gn**is*si*m ultric velit, poser accumsan \
+leo vehicu eget. Maris at urna e***ge***t arcu vultate feugiat nec id nunc. \
 Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
 sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
 fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
-feugiat erat dignissim. Aliquam *tempus*, quam non suscipit varius, ligula quam \
+feugiat erat dignissim. Aliquam *tempus*, quam non suspit varius, ligula quam \
 elementum orci, vitae euismod lectus nulla non mauris. Proin rutrum massa \
 feugiat sem scelerisque imperdiet laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus **vulputate** pharetra lorem lobortis. Phasellus eget \
@@ -376,7 +379,7 @@ tellus sed odio facilisis euismod. Mauris a elit libero.
 
 Nam elit. Ut sit amet diam mauris. Fusce ac erat, ut ultrices ligula. \
 Vestibulum adipiscing mi libero. Suspendisse potenti. Fusce eu dui nunc, at \
-tempus leo. Nulla facilisi. Morbi *dignissim ultrices velit*, posuere accumsan \
+tempus leo. Nulla facilis. Morbi *dignissim ultrices velit*, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum \
 sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
@@ -385,7 +388,7 @@ feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
 elementum orci, vitae *euismod lectus nulla non mauris. Proin rutrum massa \
 feugiat sem scelerisque **imperdiet** laoreet vulputate. Quisque ullamcorper\
  justo et velit dapibus vulputate pharetra lorem lobortis. Phasellus eget \
-tellus sed odio facilisis* euismod. Mauris a elit libero, a gravida ligula. Nam\
+tellus sed odio facilsis* euismod. Mauris a elit libero, a gravida ligula. Nam\
 elit.
 
 # Ich bin total aufgeregt
@@ -395,7 +398,7 @@ tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 Nullam in faucibus ipsum. Maecenas rhoncus massa eu libero vestibulum.
 ## Level 2
-### Level 3 
+### Level 3
 sollicitudin. Morbi tempus sapien id magna molestie ut sodales lectus \
 fringilla. In a quam nibh. Nullam vulputate nunc at velit ultricies at \
 feugiat erat dignissim. Aliquam tempus, quam non suscipit varius, ligula quam \
@@ -424,26 +427,28 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
         self.connect('apply-tag', self._on_apply_tag)
-        
+
         self.tag_default = self.create_tag("default", foreground="#888888")
 
         self.tag_focus = self.create_tag("focus", foreground="#000000")
 
-        self.tag_heading1 = self.create_tag("heading1", weight=pango.WEIGHT_BOLD,
-            left_margin=30)
-        self.tag_heading2 = self.create_tag("heading2", weight=pango.WEIGHT_BOLD,
-            left_margin=40)
-        self.tag_heading3 = self.create_tag("heading3", weight=pango.WEIGHT_BOLD,
-            left_margin=50)
-        self.tag_heading4 = self.create_tag("heading4", weight=pango.WEIGHT_BOLD,
-            left_margin=60)
-        self.tag_heading5 = self.create_tag("heading5", weight=pango.WEIGHT_BOLD,
-            left_margin=70)
-        self.tag_heading6 = self.create_tag("heading6", weight=pango.WEIGHT_BOLD,
-            left_margin=80)
+        self.tag_heading1 = self.create_tag("heading1",
+            weight=pango.WEIGHT_BOLD, left_margin=30)
+        self.tag_heading2 = self.create_tag("heading2",
+            weight=pango.WEIGHT_BOLD, left_margin=40)
+        self.tag_heading3 = self.create_tag("heading3",
+            weight=pango.WEIGHT_BOLD, left_margin=50)
+        self.tag_heading4 = self.create_tag("heading4",
+            weight=pango.WEIGHT_BOLD, left_margin=60)
+        self.tag_heading5 = self.create_tag("heading5",
+            weight=pango.WEIGHT_BOLD, left_margin=70)
+        self.tag_heading6 = self.create_tag("heading6",
+            weight=pango.WEIGHT_BOLD, left_margin=80)
 
-        self.tag_table_default = self.create_tag("table_default", left_margin=110)
-        self.tag_table_sorted = self.create_tag("table_sorted", left_margin=110)
+        self.tag_table_default = self.create_tag("table_default",
+            left_margin=110)
+        self.tag_table_sorted = self.create_tag("table_sorted",
+            left_margin=110)
 
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
@@ -482,15 +487,16 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
     def _update_markdown(self, start, end=None):
         # Used to save which iters we already used as start or end of a pattern
-        used_iters = [] 
+        used_iters = []
 
-        if end is None: end = self.get_end_iter()
+        if end is None:
+            end = self.get_end_iter()
 
         finished = False
 
         # Only remove markdown tags (no focus tags)
         for p in self.patterns:
-            self.remove_tag_by_name(p[0], start, end) 
+            self.remove_tag_by_name(p[0], start, end)
 
         while not finished:
             tagn, mstart, mend, length = self._get_first_pattern(start, end)
@@ -516,7 +522,6 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
             else:
                 # No pattern found
                 finished = True
-
 
     def _get_first_pattern(self, start, end):
         """ Returns (tagname, start, end) of the first occurence of any
@@ -550,9 +555,9 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
                 matches.append([result_start.start(), [pattern_tagn, mstart,
                     mend, pattern[3]]])
 
-        if len(matches) == 0: return (None, None, None, None)
+        if len(matches) == 0:
+            return (None, None, None, None)
         return min(matches)[1]
-
 
     def _focus_current_sentence(self):
         """ Applys a highlighting tag to the sentence the cursor is on """
@@ -580,8 +585,10 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
                 mend.forward_to_tag_toggle(self.tag_table_default)
             else:
                 # Hilight current sentence
-                if not starts_sentence: mstart.backward_sentence_start()
-                if not ends_sentence: mend.forward_sentence_end()
+                if not starts_sentence:
+                    mstart.backward_sentence_start()
+                if not ends_sentence:
+                    mend.forward_sentence_end()
 
             self.apply_tag_by_name("default", start, end)
             self.apply_tag_by_name("focus", mstart, mend)
