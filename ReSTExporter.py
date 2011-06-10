@@ -68,7 +68,7 @@ class ReSTExporter():
 
         docutils.core.publish_file(source=file(filename + '.rst', 'r'),
             writer_name='LaTeX2e', destination=file(filename + '.tex', 'w+'))
-        subprocess.Popen('pdflatex out.tex', shell=True)
+        subprocess.Popen('pdflatex ' + filename + ' .tex', shell=True)
 
     def to_odt(self, filename):
         text = self.buffer.get_start_iter().get_text( \

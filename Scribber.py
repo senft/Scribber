@@ -83,6 +83,16 @@ class ScribberView(gtk.Window):
             action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
             gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
+        filter_pdf = gtk.FileFilter()
+        filter_pdf.set_name('PDF-Document')
+        filter_pdf.add_pattern('*.pdf')
+        chooser.add_filter(filter_pdf)
+
+        filter_odt = gtk.FileFilter()
+        filter_odt.set_name('Open-Office-Document')
+        filter_odt.add_pattern('*.odt')
+        chooser.add_filter(filter_odt)
+
         response = chooser.run()
 
         if response == gtk.RESPONSE_OK:
@@ -90,12 +100,11 @@ class ScribberView(gtk.Window):
             print 'Export to: ', filename
 
             file, ext = os.path.splitext(filename)
-            if ext == '.pdf':
-                self.exporter.to_pdf(file)
-            elif ext == '.odt':
-                self.exporter.to_odt(file)
-            elif ext == '.html' or ext == '.htm':
-                self.exporter.to_odt(file)
+            
+            if chooser.get_filter().get_name() == 'PDF-Document':
+               self.exporter.to_pdf(file)
+            elif chooser.get_filter().get_name() == 'Open-Office-Document':
+               self.exporter.to_odt(file)
 
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no file selected'
