@@ -3,6 +3,7 @@ Scribber is a simple text editor that focuses on minimalism.
     Some features:
         * Highlithing the current sentence
         * Realtime WYSIWYG mix of Markdown and ReST
+        * Minimalistic UI that lets you focus on writing
 
     Dependencies:
         * GTK+
@@ -10,11 +11,11 @@ Scribber is a simple text editor that focuses on minimalism.
 
 TODO:
 =====
+
     * Decide wether i want to implement spellcheck or not
     * When resizing the window, update cursor position
     * When moving the cursor while it is out of focus
         refocus to cursor (or does this get eliminated with
         preceding point?) 
-    * Implement footnotes
 
 Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
