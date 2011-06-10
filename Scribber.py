@@ -422,7 +422,7 @@ tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
  vel nisi eget tortor sodales dictum.""")
 
-        #self.set_text('ha***ll***o asd*hall ooo*asd ***megakrass***')
+        self.set_text('ha***ll***o asd*hall ooo*asd ***megakrass***')
 
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
@@ -461,7 +461,8 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
 
     def _on_apply_tag(self, buf, tag, start, end):
         # FIXME This is a hack! It allows apply-tag only while
-        #       _on_insert_text() and _on_delete_range()
+        #       _on_insert_text() and _on_delete_range() so we dont paste
+        #       tagged text
         if not self._apply_tags:
             self.emit_stop_by_name('apply-tag')
             return True

@@ -8,11 +8,14 @@ from docutils.parsers.rst import roles
 import subprocess
 import re
 
+
 class ReSTExporter():
     def __init__(self, buffer):
         self.buffer = buffer
 
-    def role_bolditalic(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    def role_bolditalic(name, rawtext, text, lineno, inliner, options={},
+        content=[]):
+
         node = nodes.emphasis('', '', **options)
         node.append(nodes.strong(rawtext, utils.unescape(text), **options))
         return [node], []
@@ -21,11 +24,12 @@ class ReSTExporter():
 
     def extend_rst(self, text):
         # Convert ***foo*** to :bolditalic:`foo`
-        text = re.sub('(?<!\w)\*\*\*(.+?)\*\*\*',':bolditalic:`\\1`', text)
+        text = re.sub('(?<!\w)\*\*\*(.+?)\*\*\*', ':bolditalic:`\\1`', text)
 
         # Convert foo***bar***baz to foo\ ***bar***\ baz, because ReST does not
         # allow hilight chars in a word
-        text = re.sub('(\w)\*\*\*(.+?)\*\*\*(\w)', '\\1\ :bolditalic:`\\2`\ \\3', text)
+        text = re.sub('(\w)\*\*\*(.+?)\*\*\*(\w)',
+            '\\1\ :bolditalic:`\\2`\ \\3', text)
 
         # Convert foo**bar**baz to foo\ **bar**\ baz, because ReST does not
         # allow hilight chars in a word
@@ -37,8 +41,10 @@ class ReSTExporter():
 
         # Convert **foo*bar*baz** to **foo*****bar*****baz**, because ReST does
         # not allow nested tags
-        #text = re.sub('\*(\w+).\*\*(.+?)\*\*.(\w+)\*','*\\1* ***\\2*** *\\3*', text)
-        #text = re.sub('\*\*(\w+).\*(.+?)\*.(\w+)\*\*','*\\1* ***\\2*** *\\3*', text)
+        #text = re.sub('\*(\w+).\*\*(.+?)\*\*.(\w+)\*','*\\1* ***\\2*** *\\3*',
+        #    text)
+        #text = re.sub('\*\*(\w+).\*(.+?)\*.(\w+)\*\*','*\\1* ***\\2*** *\\3*',
+        #    text)
 
         return text
 
@@ -46,7 +52,8 @@ class ReSTExporter():
         text = self.buffer.get_start_iter().get_text( \
             self.buffer.get_end_iter())
 
-        with open(filename, 'w+') as f: f.write(text)
+        with open(filename, 'w+') as f:
+            f.write(text)
 
     def to_pdf(self, filename):
         text = self.buffer.get_start_iter().get_text( \
@@ -54,7 +61,8 @@ class ReSTExporter():
 
         text = self.extend_rst(text)
 
-        with open(filename + '.rst', 'w+') as f: f.write(text)
+        with open(filename + '.rst', 'w+') as f:
+            f.write(text)
 
         docutils.core.publish_file(source=file(filename + '.rst', 'r'),
             writer_name='LaTeX2e', destination=file(filename + '.tex', 'w+'))
@@ -66,8 +74,8 @@ class ReSTExporter():
 
         text = self.extend_rst(text)
 
-        with open(filename + '.rst', 'w+') as f: f.write(text)
+        with open(filename + '.rst', 'w+') as f:
+            f.write(text)
 
-        docutils.core.publish_file(source=file(filename  + '.rst', 'r'),
+        docutils.core.publish_file(source=file(filename + '.rst', 'r'),
             writer_name='odf_odt', destination=file(filename + '.odt', 'w+'))
-
