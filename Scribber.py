@@ -38,7 +38,7 @@ class ScribberView(gtk.Window):
 
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        scrolled_window.add_with_viewport(self.view)
+        scrolled_window.add(self.view)
         vbox = gtk.VBox(False, 2)
         self.add(vbox)
 
@@ -93,6 +93,8 @@ class ScribberView(gtk.Window):
             if ext == '.pdf':
                 self.exporter.to_pdf(file)
             elif ext == '.odt':
+                self.exporter.to_odt(file)
+            elif ext == '.html' or ext == '.htm':
                 self.exporter.to_odt(file)
 
         elif response == gtk.RESPONSE_CANCEL:
@@ -332,10 +334,9 @@ class ScribberTextView(gtk.TextView):
         pass
 
     def _focus_current_sentence(self):
-        # TODO: Scroll doesnt work
         if self.focus:
-            sentence_start = self.get_buffer()._focus_current_sentence()
-            self.scroll_to_iter(sentence_start, 0, True, 0.0, 0.0)
+            cursor_iter = self.get_buffer()._focus_current_sentence()
+            self.scroll_to_iter(cursor_iter, 0.0, True, 0.0, 0.5)
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
@@ -422,7 +423,7 @@ tempus leo. Nulla facilisi. Morbi dignissim ultrices velit, posuere accumsan \
 leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
  vel nisi eget tortor sodales dictum.""")
 
-        self.set_text('ha***ll***o asd*hall ooo*asd ***megakrass***')
+        #self.set_text('ha***ll***o asd*hall ooo*asd ***megakrass***')
 
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
@@ -595,7 +596,7 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
             self.apply_tag_by_name("focus", mstart, mend)
 
         self._apply_tags = False
-        return mstart
+        return cursor_iter
 
     def stop_focus(self):
         start = self.get_start_iter()

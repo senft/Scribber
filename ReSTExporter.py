@@ -23,6 +23,13 @@ class ReSTExporter():
     roles.register_canonical_role('bolditalic', role_bolditalic)
 
     def extend_rst(self, text):
+        # Convert **foo*bar*baz** to **foo*****bar*****baz**, because ReST does
+        # not allow nested tags
+        text = re.sub('\*(\w+).\*\*(.+?)\*\*.(\w+)\*','*\\1* ***\\2*** *\\3*',
+            text)
+        text = re.sub('\*\*(\w+).\*(.+?)\*.(\w+)\*\*','*\\1* ***\\2*** *\\3*',
+            text)
+
         # Convert ***foo*** to :bolditalic:`foo`
         text = re.sub('(?<!\w)\*\*\*(.+?)\*\*\*', ':bolditalic:`\\1`', text)
 
@@ -33,18 +40,13 @@ class ReSTExporter():
 
         # Convert foo**bar**baz to foo\ **bar**\ baz, because ReST does not
         # allow hilight chars in a word
-        text = re.sub('(\w*])\*\*(.+?)\*\*([\w*])', '\\1\ **\\2**\ \\3', text)
+        # TODO: What if a pattern starts (ends) with "foo*as" but ends (starts)
+        # with "bar* foo"
+        text = re.sub('([\w*])\*\*(.+?)\*\*([\w*])', '\\1\ **\\2**\ \\3', text)
 
         # Convert foo*bar*baz to foo\ *bar*\ baz, because ReST does not allow
         # emphazising chars in a word
         text = re.sub('(\w)\*(?!\*)(.+?)\*(\w)', '\\1\ *\\2*\ \\3', text)
-
-        # Convert **foo*bar*baz** to **foo*****bar*****baz**, because ReST does
-        # not allow nested tags
-        #text = re.sub('\*(\w+).\*\*(.+?)\*\*.(\w+)\*','*\\1* ***\\2*** *\\3*',
-        #    text)
-        #text = re.sub('\*\*(\w+).\*(.+?)\*.(\w+)\*\*','*\\1* ***\\2*** *\\3*',
-        #    text)
 
         return text
 
@@ -79,3 +81,6 @@ class ReSTExporter():
 
         docutils.core.publish_file(source=file(filename + '.rst', 'r'),
             writer_name='odf_odt', destination=file(filename + '.odt', 'w+'))
+
+    def to_html(self, filename):
+        pass
