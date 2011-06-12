@@ -18,7 +18,7 @@ import ReSTExporter
 
 class ScribberView(gtk.Window):
     def __init__(self):
-        gtk.Window.__init__(self)
+        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         gtk.rc_parse(".gtkrc")
 
         self.view = ScribberTextView()
@@ -39,24 +39,39 @@ class ScribberView(gtk.Window):
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.view)
-        vbox = gtk.VBox(False, 2)
-        self.add(vbox)
 
-        menu_bar = self.create_menu_bar()
-        vbox.pack_start(menu_bar, False, False, 0)
+        vbox = gtk.VBox(False, 2)
+
+        self.menu_bar = self.create_menu_bar()
+        vbox.pack_start(self.menu_bar, False, False, 0)
         vbox.pack_start(scrolled_window, True, True, 0)
 
         #check = gtkspell.Spell(view)
         #check.set_language("de_DE")
 
-        statusbar = self.create_status_bar()
-        vbox.pack_end(statusbar, False, False, 0)
+        self.status_bar = self.create_status_bar()
+        vbox.pack_end(self.status_bar, False, False, 0)
 
+        self.add(vbox)
         # Go!
         self.show_all()
         gtk.main()
 
+    def _fadeout_widget(self, widget, time=10):
+        a = widget.get_snapshot()
+        print dir(a)
+        # copy the current widget style
+        style = widget.get_style().copy()
+        new_style = style.copy()
+        # change the style attributes
+        new_style.bg[gtk.STATE_NORMAL] = gtk.gdk.Color(50000, 255, 255)
+        new_style.bg_pixmap[gtk.STATE_NORMAL] = widget.get_snapshot()
+        # fill out the new style by attaching it to the widget
+        widget.set_style(new_style)
+
     def save(self):
+        self._fadeout_widget(self.menu_bar)
+    
         if not self.filename:
             self.save_as()
         else:
@@ -243,8 +258,7 @@ class ScribberView(gtk.Window):
 
         sbar_wc = gtk.Statusbar()
         context_id = sbar_wc.get_context_id("main_window")
-
-        sbar_wc.push(context_id, "wc")
+        #sbar_wc.push(context_id, "wc")
 
         sbarbox.pack_start(self.button_focus, False, False, 0)
         sbarbox.pack_start(self.button_fullscreen, False, False, 0)
@@ -265,7 +279,7 @@ class ScribberView(gtk.Window):
         if self.view.focus:
             self.view.get_buffer().stop_focus()
         else:
-            self.view.get_buffer()._focus_current_sentence()
+            self.view.get_buffer().focus_current_sentence()
         self.view.focus = not self.view.focus
 
     def _on_fullscreen_click(self, widget, data=None):
@@ -273,9 +287,13 @@ class ScribberView(gtk.Window):
             self.unfullscreen()
             # Gtk doesnt provied a way to check a windows state, so we have to
             # keep track ourselves
+            self.menu_bar.show()
+            self.status_bar.show()
             self.is_fullscreen = False
         else:
             self.fullscreen()
+            self.menu_bar.hide()
+            self.status_bar.hide()
             self.is_fullscreen = True
 
     def _on_window_state_event(self, event, data=None):
@@ -344,7 +362,7 @@ class ScribberTextView(gtk.TextView):
 
     def _focus_current_sentence(self):
         if self.focus:
-            cursor_iter = self.get_buffer()._focus_current_sentence()
+            cursor_iter = self.get_buffer().focus_current_sentence()
             self.scroll_to_iter(cursor_iter, 0.0, True, 0.0, 0.5)
 
 
@@ -570,7 +588,7 @@ leo vehicula eget. Mauris at urna eget arcu vulputate feugiat nec id nunc. \
             return (None, None, None, None)
         return min(matches)[1]
 
-    def _focus_current_sentence(self):
+    def focus_current_sentence(self):
         """ Applys a highlighting tag to the sentence the cursor is on """
 
         self._apply_tags = True
