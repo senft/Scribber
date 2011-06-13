@@ -36,6 +36,8 @@ class ScribberView(gtk.Window):
         self.connect("destroy", self.destroy)
         self.connect("window-state-event", self._on_window_state_event)
 
+        # Use Layout container instead:
+        # http://www.pygtk.org/pygtk2tutorial/sec-Layout.html
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.view)
@@ -43,7 +45,11 @@ class ScribberView(gtk.Window):
         vbox = gtk.VBox(False, 2)
 
         self.menu_bar = self.create_menu_bar()
-        vbox.pack_start(self.menu_bar, False, False, 0)
+
+        fixed_mb = gtk.Fixed()
+        fixed_mb.put(self.menu_bar, 0, 0)
+
+        vbox.pack_start(fixed_mb, False, False, 0)
         vbox.pack_start(scrolled_window, True, True, 0)
 
         #check = gtkspell.Spell(view)
