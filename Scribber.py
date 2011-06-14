@@ -46,10 +46,7 @@ class ScribberView(gtk.Window):
 
         self.menu_bar = self.create_menu_bar()
 
-        fixed_mb = gtk.Fixed()
-        fixed_mb.put(self.menu_bar, 0, 0)
-
-        vbox.pack_start(fixed_mb, False, False, 0)
+        vbox.pack_start(self.menu_bar, False, False, 0)
         vbox.pack_start(scrolled_window, True, True, 0)
 
         #check = gtkspell.Spell(view)
@@ -63,21 +60,7 @@ class ScribberView(gtk.Window):
         self.show_all()
         gtk.main()
 
-    def _fadeout_widget(self, widget, time=10):
-        a = widget.get_snapshot()
-        print dir(a)
-        # copy the current widget style
-        style = widget.get_style().copy()
-        new_style = style.copy()
-        # change the style attributes
-        new_style.bg[gtk.STATE_NORMAL] = gtk.gdk.Color(50000, 255, 255)
-        new_style.bg_pixmap[gtk.STATE_NORMAL] = widget.get_snapshot()
-        # fill out the new style by attaching it to the widget
-        widget.set_style(new_style)
-
     def save(self):
-        self._fadeout_widget(self.menu_bar)
-    
         if not self.filename:
             self.save_as()
         else:
@@ -264,7 +247,7 @@ class ScribberView(gtk.Window):
 
         sbar_wc = gtk.Statusbar()
         context_id = sbar_wc.get_context_id("main_window")
-        #sbar_wc.push(context_id, "wc")
+        sbar_wc.push(context_id, "wc")
 
         sbarbox.pack_start(self.button_focus, False, False, 0)
         sbarbox.pack_start(self.button_fullscreen, False, False, 0)
