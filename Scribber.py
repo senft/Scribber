@@ -15,9 +15,9 @@ import ReSTExporter
 from Widgets import ScribberTextView
 
 
-class ScribberView(gtk.Window):
+class ScribberView():
     def __init__(self):
-        gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+        self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
 
@@ -26,13 +26,13 @@ class ScribberView(gtk.Window):
         self.filename = None
         self.exporter = ReSTExporter.ReSTExporter(self.view.get_buffer())
 
-        self.set_title("Scribber - Untitled")
-        self.set_destroy_with_parent(False)
+        self.win.set_title("Scribber - Untitled")
+        self.win.set_destroy_with_parent(False)
 
         # Callbacks
-        self.connect('delete_event', self._delete_event)
-        self.connect('destroy', self.destroy)
-        self.connect('window-state-event', self._on_window_state_event)
+        self.win.connect('delete_event', self._delete_event)
+        self.win.connect('destroy', self.destroy)
+        self.win.connect('window-state-event', self._on_window_state_event)
 
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -46,13 +46,15 @@ class ScribberView(gtk.Window):
         vbox.pack_start(self.menu_bar, False, False, 0)
         vbox.pack_start(scrolled_window, True, True, 0)
         vbox.pack_end(self.status_bar, False, False, 0)
-        self.add(vbox)
+        self.win.add(vbox)
 
         #check = gtkspell.Spell(view)
         #check.set_language("de_DE")
 
+        self.open("default.txt")
+
         # Go!
-        self.show_all()
+        self.win.show_all()
         gtk.main()
 
     def new(self):
@@ -60,33 +62,37 @@ class ScribberView(gtk.Window):
 
     def save(self):
         if not self.filename:
+            # Never saved before (no filename known) -> show SaveAs dialog
             if self.save_as():
-                self.text_not_modified()
+                self.view.set_text_not_modified()
         else:
+            # Filename is know
             if self.exporter.to_plain_text(self.filename):
-                self.text_not_modified()
+                self.view.set_text_not_modified()
+
+        # If we saved in one of the branches above, is_modified should be set
+        # to false now -> save() was successfull
+        return not self.view.is_text_modified()
 
     def save_as(self):
-        dialog = gtk.FileChooserDialog(title='Save...',
+        success = False
+
+        dialog = gtk.FileChooserDialog(parent=self.win, title='Save...',
                 action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
                 gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
         response = dialog.run()
 
         if response == gtk.RESPONSE_OK:
-            print 'Save as: ', dialog.get_filename()
+            # User picked a file
             self.filename = dialog.get_filename()
-            self.save()
-        elif response == gtk.RESPONSE_CANCEL:
-            print 'Closed, no file selected'
+            success = self.save()
 
         dialog.destroy()
-
-        #TODO: Check if succesfull
-        return True
+        return success
 
     def export(self):
-        dialog = gtk.FileChooserDialog(title='Export...',
+        dialog = gtk.FileChooserDialog(parent=self.win, title='Export...',
             action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
             gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
@@ -101,6 +107,7 @@ class ScribberView(gtk.Window):
         dialog.add_filter(filter_odt)
 
         response = dialog.run()
+        dialog.destroy()
 
         if response == gtk.RESPONSE_OK:
             filename = dialog.get_filename()
@@ -116,31 +123,40 @@ class ScribberView(gtk.Window):
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no file selected'
 
-        dialog.destroy()
 
-    def open(self):
-        if self.text_is_modified():
+    def open(self, filename=None):
+        response = None
+        if self.view.is_text_modified():
             response = self.show_ask_save_dialog()
 
-        if not response == gtk.RESPONSE_CANCEL:
+        if not filename:
+            if not response == gtk.RESPONSE_CANCEL:
 
-            dialog = gtk.FileChooserDialog(title='Open...',
-                    action=gtk.FILE_CHOOSER_ACTION_OPEN, buttons=(gtk.STOCK_CANCEL,
-                    gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+                dialog = gtk.FileChooserDialog(parent=self.win, title='Open...',
+                        action=gtk.FILE_CHOOSER_ACTION_OPEN, buttons=(gtk.STOCK_CANCEL,
+                        gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
 
-            response = dialog.run()
+                response = dialog.run()
 
-            if response == gtk.RESPONSE_OK:
-                print 'Open: ', dialog.get_filename()
-            elif response == gtk.RESPONSE_CANCEL:
-                print 'Closed, no file selected'
+                if response == gtk.RESPONSE_OK:
+                    filename = dialog.get_filename()
+                    self.view.open_file(filename)
+                    self.win.set_title('Scribber - ' + filename)
+                    self.filename = filename
+                elif response == gtk.RESPONSE_CANCEL:
+                    print 'Closed, no file selected'
 
-            dialog.destroy()
+                dialog.destroy()
+        else:
+            self.view.open_file(filename)
+            self.win.set_title('Scribber - ' + filename)
+            self.filename = filename
 
     def show_ask_save_dialog(self):
-        dialog = gtk.MessageDialog(self, flags=0, type=gtk.MESSAGE_QUESTION,
-                buttons=gtk.BUTTONS_YES_NO, message_format='The document has \
-been modified. Do you want so save your changes?')
+        dialog = gtk.MessageDialog(parent=self.win, flags=0, 
+                type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
+                message_format='The document has been modified. Do you want \
+to save your changes?')
 
         dialog.add_button('Cancel', gtk.RESPONSE_CANCEL)
         response = dialog.run()
@@ -155,7 +171,7 @@ been modified. Do you want so save your changes?')
         menu_bar = gtk.MenuBar()
 
         agr = gtk.AccelGroup()
-        self.add_accel_group(agr)
+        self.win.add_accel_group(agr)
 
         # File menu
         filemenu = gtk.Menu()
@@ -188,7 +204,7 @@ been modified. Do you want so save your changes?')
 
         filemenu.append(gtk.SeparatorMenuItem())
 
-        exportm = gtk.MenuItem("Expor_t...", True)
+        exportm = gtk.MenuItem("Expor_t...")
         exportm.connect('activate', self._on_exportm)
         filemenu.append(exportm)
 
@@ -279,12 +295,6 @@ been modified. Do you want so save your changes?')
 
         return sbarbox
 
-    def text_is_modified(self):
-        return self.view.get_buffer().is_modified
-
-    def text_not_modified(self):
-        self.view.get_buffer().is_modified = False
-
     def _on_newm(self, data=None):
         self.new()
 
@@ -301,7 +311,7 @@ been modified. Do you want so save your changes?')
         self.open()
 
     def _on_quitm(self, data=None):
-        
+        self.win.emit('destroy-event', None)
         pass
         
     def _on_focus_click(self, widget, data=None):
@@ -335,13 +345,13 @@ been modified. Do you want so save your changes?')
 
     def _delete_event(self, widget, event, data=None):
         # When this returns True we dont quit
-        response = self.show_ask_save_dialog()
+        response = None
+        if self.view.is_text_modified():
+            response = self.show_ask_save_dialog()
 
-        print response == gtk.RESPONSE_CANCEL
         return response == gtk.RESPONSE_CANCEL
 
     def destroy(self, widget, data=None):
-        print 'asd'
         gtk.main_quit()
 
 

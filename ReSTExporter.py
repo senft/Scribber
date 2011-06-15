@@ -23,13 +23,6 @@ class ReSTExporter():
     roles.register_canonical_role('bolditalic', role_bolditalic)
 
     def extend_rst(self, text):
-        # Convert **foo*bar*baz** to **foo*****bar*****baz**, because ReST does
-        # not allow nested tags
-        text = re.sub('\*(\w+).\*\*(.+?)\*\*.(\w+)\*','*\\1* ***\\2*** *\\3*',
-            text)
-        text = re.sub('\*\*(\w+).\*(.+?)\*.(\w+)\*\*','*\\1* ***\\2*** *\\3*',
-            text)
-
         # Convert ***foo*** to :bolditalic:`foo`
         text = re.sub('(?<!\w)\*\*\*(.+?)\*\*\*', ':bolditalic:`\\1`', text)
 
