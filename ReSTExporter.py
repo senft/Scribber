@@ -57,6 +57,9 @@ class ReSTExporter():
         with open(filename, 'w+') as f:
             f.write(text)
 
+        # TODO Check if was succesfull
+        return True
+
     def to_pdf(self, filename):
         text = self.buffer.get_start_iter().get_text( \
             self.buffer.get_end_iter())
