@@ -129,7 +129,7 @@ class ScribberView():
         if self.view.is_text_modified():
             response = self.show_ask_save_dialog()
 
-        if not filename:
+        if filename is None:
             if not response == gtk.RESPONSE_CANCEL:
 
                 dialog = gtk.FileChooserDialog(parent=self.win, title='Open...',
@@ -234,15 +234,19 @@ to save your changes?')
         editmenu.append(gtk.SeparatorMenuItem())
 
         cutm = gtk.ImageMenuItem(gtk.STOCK_CUT, agr)
+        cutm.connect("activate", self._on_cutm)
         editmenu.append(cutm)
 
         copym = gtk.ImageMenuItem(gtk.STOCK_COPY, agr)
+        copym.connect("activate", self._on_copym)
         editmenu.append(copym)
 
         pastem = gtk.ImageMenuItem(gtk.STOCK_PASTE, agr)
+        pastem.connect("activate", self._on_pastem)
         editmenu.append(pastem)
 
         deletem = gtk.ImageMenuItem(gtk.STOCK_DELETE, agr)
+        deletem.connect("activate", self._on_deletem)
         editmenu.append(deletem)
 
         editmenu.append(gtk.SeparatorMenuItem())
@@ -311,9 +315,20 @@ to save your changes?')
         self.open()
 
     def _on_quitm(self, data=None):
-        self.win.emit('destroy-event', None)
         pass
         
+    def _on_copym(self, data=None):
+        self.view.copy()
+
+    def _on_cutm(self, data=None):
+        self.view.cut()
+
+    def _on_pastem(self, data=None):
+        self.view.paste()
+
+    def _on_deletem(self, data=None):
+        self.view.delete()
+
     def _on_focus_click(self, widget, data=None):
         if self.view.focus:
             self.view.get_buffer().stop_focus()
