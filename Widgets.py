@@ -102,15 +102,15 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
     def __init__(self):
         gtk.TextBuffer.__init__(self)
-        
+ 
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
         self.connect('apply-tag', self._on_apply_tag)
         self.connect('changed', self._on_changed)
 
         self.tag_default = self.create_tag("default", foreground="#888888")
-
         self.tag_focus = self.create_tag("focus", foreground="#000000")
+        self.tag_match = self.create_tag('match', background='#FFFF00')
 
         self.tag_heading1 = self.create_tag("heading1",
             weight=pango.WEIGHT_BOLD, left_margin=30)
@@ -166,6 +166,33 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self._apply_tags = True
         self._update_markdown(self.get_start_iter())
         self._apply_tags = False
+
+    def hilight_find(self, needle):
+        #TODO: When I search for 'foo bar baz' it should also match
+        # 'foo *bar* baz'
+        start = self.get_start_iter()
+        end = self.get_end_iter()
+        text = start.get_text(end)
+
+        needle_re = re.compile(needle)
+
+        self.remove_tag_by_name('match', start, end)
+
+        for match in needle_re.finditer(text):
+            mstart = start.copy()
+            mend = start.copy()
+
+            mstart.forward_chars(match.start())
+            mend.forward_chars(match.end())
+
+            self._apply_tags = True
+            self.apply_tag_by_name('match', mstart, mend)
+            self._apply_tags = False
+
+    def stop_hilight_find(self):
+        start = self.get_start_iter()
+        end = self.get_end_iter()
+        self.remove_tag_by_name('match', start, end)
 
     def _update_markdown(self, start, end=None):
         # Used to save which iters we already used as start or end of a pattern
@@ -283,3 +310,50 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.remove_tag_by_name("default", start, end)
         self.apply_tag_by_name("focus", start, end)
 
+class ScribberFindBox(gtk.HBox):
+    def __init__(self, buffer):
+
+
+        gtk.HBox.__init__(self, False, 0)
+
+        #self.connect('on-show', focus_txt_find)
+
+        self.buffer = buffer
+
+        self.btn_cancel = gtk.Button(label=None, stock=gtk.STOCK_CANCEL)
+        self.btn_cancel.connect('clicked', self.dispose)
+
+        self.lbl_find = gtk.Label('Find: ')
+        self.txt_find = gtk.Entry()
+        self.txt_find.connect('changed', self.search)
+
+        self.btn_next = gtk.Button(stock=gtk.STOCK_GO_BACK)
+        self.btn_back = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
+
+        self.chk_matchcase = gtk.CheckButton('Match case')
+
+        self.add(self.lbl_find)
+        self.add(self.txt_find)
+        self.add(self.btn_next)
+        self.add(self.btn_back)
+        self.add(self.chk_matchcase)
+        self.add(self.btn_cancel)
+
+    def search(self, entry):
+        self.buffer.hilight_find(entry.get_text())
+
+    def dispose(self, data=None):
+        self.buffer.stop_hilight_find()
+        self.hide()
+
+
+class ScribberFindReplaceBox(ScribberFindBox):
+    def __init__(self, buffer):
+        gtk.HBox.__init__(self, False, 0)
+
+        self.buffer = buffer
+
+        self.btn_cancel = gtk.Button(label=None, stock=gtk.STOCK_CANCEL)
+        self.btn_cancel.connect('clicked', self.dispose)
+
+        self.add(self.btn_cancel)

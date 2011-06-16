@@ -11,8 +11,8 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import os
-import ReSTExporter
-from Widgets import ScribberTextView
+from ReSTExporter import ReSTExporter
+from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox
 
 
 class ScribberView():
@@ -24,7 +24,7 @@ class ScribberView():
         self.view = ScribberTextView()
         self.is_fullscreen = False
         self.filename = None
-        self.exporter = ReSTExporter.ReSTExporter(self.view.get_buffer())
+        self.exporter = ReSTExporter(self.view.get_buffer())
 
         self.win.set_title("Scribber - Untitled")
         self.win.set_destroy_with_parent(False)
@@ -39,17 +39,8 @@ class ScribberView():
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.view)
 
-        self.find_box = gtk.HBox(False, 0)
-        self.find_box.add(gtk.Button(label=None, stock=gtk.STOCK_CANCEL))
-        self.find_box.add(gtk.Label('Find: '))
-        self.find_box.add(gtk.Entry())
-        self.find_box.add(gtk.Button(stock=gtk.STOCK_GO_BACK))
-        self.find_box.add(gtk.Button(stock=gtk.STOCK_GO_FORWARD))
-        self.find_box.add(gtk.Button('Hilight all'))
-        self.find_box.add(gtk.CheckButton('Match case'))
-
-        self.find_replace_box = gtk.HBox(False, 2)
-        self.find_replace_box.add(gtk.Button('Search replace'))
+        self.find_box = ScribberFindBox(self.view.get_buffer())
+        self.find_replace_box = ScribberFindReplaceBox(self.view.get_buffer())
 
         vbox = gtk.VBox(False, 2)
 
@@ -57,9 +48,9 @@ class ScribberView():
         self.status_bar = self.create_status_bar()
 
         vbox.pack_start(self.menu_bar, False, False, 0)
+        vbox.pack_start(scrolled_window, True, True, 0)
         vbox.pack_start(self.find_box, False, False, 0)
         vbox.pack_start(self.find_replace_box, False, False, 0)
-        vbox.pack_start(scrolled_window, True, True, 0)
         vbox.pack_end(self.status_bar, False, False, 0)
         self.win.add(vbox)
 
@@ -196,11 +187,18 @@ class ScribberView():
 
     def find(self):
         self.find_replace_box.hide()
-        self.find_box.show()
+        if self.find_box.get_visible():
+            self.find_box.hide()
+        else:
+            self.find_box.show()
 
     def find_replace(self):
         self.find_box.hide()
-        self.find_replace_box.show()
+        if self.find_replace_box.get_visible():
+            self.find_replace_box.hide()
+        else:
+            self.find_replace_box.show()
+
     def show_ask_save_dialog(self):
         dialog = gtk.MessageDialog(parent=self.win, flags=0, 
                 type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
@@ -416,7 +414,6 @@ to save your changes?')
             self.is_fullscreen = False
 
     def _on_window_resize(self, requisition, data=None):
-        print requisition
         self.view.get_buffer().focus_current_sentence()
 
     def _delete_event(self, widget, event, data=None):
