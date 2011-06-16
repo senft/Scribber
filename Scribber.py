@@ -38,12 +38,26 @@ class ScribberView():
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.view)
 
+        self.find_box = gtk.HBox(False, 0)
+        self.find_box.add(gtk.Button(label=None, stock=gtk.STOCK_CANCEL))
+        self.find_box.add(gtk.Label('Find: '))
+        self.find_box.add(gtk.Entry())
+        self.find_box.add(gtk.Button(stock=gtk.STOCK_GO_BACK))
+        self.find_box.add(gtk.Button(stock=gtk.STOCK_GO_FORWARD))
+        self.find_box.add(gtk.Button('Hilight all'))
+        self.find_box.add(gtk.CheckButton('Match case'))
+
+        self.find_replace_box = gtk.HBox(False, 2)
+        self.find_replace_box.add(gtk.Button('Search replace'))
+
         vbox = gtk.VBox(False, 2)
 
         self.menu_bar = self.create_menu_bar()
         self.status_bar = self.create_status_bar()
 
         vbox.pack_start(self.menu_bar, False, False, 0)
+        vbox.pack_start(self.find_box, False, False, 0)
+        vbox.pack_start(self.find_replace_box, False, False, 0)
         vbox.pack_start(scrolled_window, True, True, 0)
         vbox.pack_end(self.status_bar, False, False, 0)
         self.win.add(vbox)
@@ -55,6 +69,8 @@ class ScribberView():
 
         # Go!
         self.win.show_all()
+        self.find_box.hide()
+        self.find_replace_box.hide()
         gtk.main()
 
     def new(self):
@@ -152,6 +168,38 @@ class ScribberView():
             self.win.set_title('Scribber - ' + filename)
             self.filename = filename
 
+    def delete(self):
+        self.view.get_buffer().delete_selection(True, True)
+
+    def copy(self):
+        try:
+            clipboard = gtk.clipboard_get()
+            (start, end) = self.view.get_buffer().get_selection_bounds()
+            clipboard.set_text(start.get_text(end))
+        except:
+            # No selection
+            pass
+
+    def cut(self):
+        self.copy()
+        self.view.get_buffer().delete_selection(True, True)
+
+    def paste(self):
+        # If text is selected delete it first
+        self.delete()
+
+        clipboard = gtk.clipboard_get()
+        text = clipboard.wait_for_text()
+        if text:
+            self.view.get_buffer().insert_at_cursor(text)
+
+    def find(self):
+        self.find_replace_box.hide()
+        self.find_box.show()
+
+    def find_replace(self):
+        self.find_box.hide()
+        self.find_replace_box.show()
     def show_ask_save_dialog(self):
         dialog = gtk.MessageDialog(parent=self.win, flags=0, 
                 type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
@@ -252,9 +300,11 @@ to save your changes?')
         editmenu.append(gtk.SeparatorMenuItem())
 
         findm = gtk.ImageMenuItem(gtk.STOCK_FIND, agr)
+        findm.connect("activate", self._on_findm)
         editmenu.append(findm)
 
         findreplacem = gtk.ImageMenuItem(gtk.STOCK_FIND_AND_REPLACE, agr)
+        findreplacem.connect("activate", self._on_findreplacem)
         editmenu.append(findreplacem)
 
         # Help menu
@@ -318,16 +368,22 @@ to save your changes?')
         pass
         
     def _on_copym(self, data=None):
-        self.view.copy()
+        self.copy()
 
     def _on_cutm(self, data=None):
-        self.view.cut()
+        self.cut()
 
     def _on_pastem(self, data=None):
-        self.view.paste()
+        self.paste()
 
     def _on_deletem(self, data=None):
-        self.view.delete()
+        self.delete()
+
+    def _on_findm(self, data=None):
+        self.find()
+
+    def _on_findreplacem(self, data=None):
+        self.find_replace()
 
     def _on_focus_click(self, widget, data=None):
         if self.view.focus:
