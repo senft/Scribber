@@ -33,6 +33,7 @@ class ScribberView():
         self.win.connect('delete_event', self._delete_event)
         self.win.connect('destroy', self.destroy)
         self.win.connect('window-state-event', self._on_window_state_event)
+        self.win.connect('size-request', self._on_window_resize)
 
         scrolled_window = gtk.ScrolledWindow()
         scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -413,6 +414,10 @@ to save your changes?')
         else:
             self.button_fullscreen.set_active(False)
             self.is_fullscreen = False
+
+    def _on_window_resize(self, requisition, data=None):
+        print requisition
+        self.view.get_buffer().focus_current_sentence()
 
     def _delete_event(self, widget, event, data=None):
         # When this returns True we dont quit
