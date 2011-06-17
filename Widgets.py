@@ -56,21 +56,13 @@ class ScribberTextView(gtk.TextView):
 
         self.get_buffer().place_cursor(self.get_buffer().get_start_iter())
         self._focus_current_sentence()
-
-        self.set_text_not_modified()
+        self.get_buffer().set_modified(False)
 
         # Success?
         return True
 
 
-    def is_text_modified(self):
-        return self.get_buffer().is_modified
-
-    def set_text_not_modified(self):
-        self.get_buffer().is_modified = False
-
     def _on_move_cursor(self, step_size, count, extend_selection, data=None):
-        print 'asd'
         self._focus_current_sentence()
 
     def _on_key_event(self, event, data=None):
@@ -108,7 +100,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
         self.connect('apply-tag', self._on_apply_tag)
-        self.connect('changed', self._on_changed)
 
         self.tag_default = self.create_tag("default", foreground="#888888")
         self.tag_focus = self.create_tag("focus", foreground="#000000")
@@ -136,11 +127,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
         self.tag_bolditalic = self.create_tag("bolditalic",
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
-
-        self.is_modified = False
-
-    def _on_changed(self, buf, data=None):
-        self.is_modified = True
 
     def _on_apply_tag(self, buf, tag, start, end):
         # FIXME This is a hack! It allows apply-tag only while

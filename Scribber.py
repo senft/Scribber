@@ -26,6 +26,9 @@ class ScribberView():
         self.filename = None
         self.exporter = ReSTExporter(self.view.get_buffer())
 
+        self.view.get_buffer().connect('modified-changed',
+            self._on_buffer_modified_change)
+
         self.win.set_title("Scribber - Untitled")
         self.win.set_destroy_with_parent(False)
 
@@ -77,15 +80,15 @@ class ScribberView():
         if not self.filename:
             # Never saved before (no filename known) -> show SaveAs dialog
             if self.save_as():
-                self.view.set_text_not_modified()
+                self.view.get_buffer().set_modified(False)
         else:
             # Filename is know
             if self.exporter.to_plain_text(self.filename):
-                self.view.set_text_not_modified()
+                self.view.get_buffer().set_modified(False)
 
-        # If we saved in one of the branches above, is_modified should be set
+        # If we saved in one of the branches above, get_modified should be
         # to false now -> save() was successfull
-        return not self.view.is_text_modified()
+        return not self.view.get_buffer().get_modified()
 
     def save_as(self):
         success = False
@@ -139,7 +142,7 @@ class ScribberView():
 
     def open(self, filename=None):
         response = None
-        if self.view.is_text_modified():
+        if self.view.get_buffer().get_modified():
             response = self.show_ask_save_dialog()
 
         if filename is None:
@@ -396,6 +399,17 @@ to save your changes?')
 
     def _on_findreplacem(self, data=None):
         self.find_replace()
+    
+    def _on_buffer_modified_change(self, widget, data=None):
+        if self.filename:
+            filename = self.filename
+        else:
+            filename = 'Untitled'
+
+        if self.view.get_buffer().get_modified():
+            self.win.set_title('Scribber - ' + filename + '*')
+        else:
+            self.win.set_title('Scribber - ' + filename)
 
     def _on_focus_click(self, widget, data=None):
         if self.view.focus:
@@ -432,7 +446,7 @@ to save your changes?')
     def _delete_event(self, widget, event, data=None):
         # When this returns True we dont quit
         response = None
-        if self.view.is_text_modified():
+        if self.view.get_buffer().get_modified():
             response = self.show_ask_save_dialog()
 
         return response == gtk.RESPONSE_CANCEL
