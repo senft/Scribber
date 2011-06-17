@@ -40,7 +40,12 @@ class ScribberView():
         scrolled_window.add(self.view)
 
         self.find_box = ScribberFindBox(self.view.get_buffer())
+        self.fix_find = gtk.Fixed()
+        self.fix_find.add(self.find_box)
+
         self.find_replace_box = ScribberFindReplaceBox(self.view.get_buffer())
+        self.fix_find_replace = gtk.Fixed()
+        self.fix_find_replace.add(self.find_replace_box)
 
         vbox = gtk.VBox(False, 2)
 
@@ -49,8 +54,8 @@ class ScribberView():
 
         vbox.pack_start(self.menu_bar, False, False, 0)
         vbox.pack_start(scrolled_window, True, True, 0)
-        vbox.pack_start(self.find_box, False, False, 0)
-        vbox.pack_start(self.find_replace_box, False, False, 0)
+        vbox.pack_start(self.fix_find, False, False, 0)
+        vbox.pack_start(self.fix_find_replace, False, False, 0)
         vbox.pack_end(self.status_bar, False, False, 0)
         self.win.add(vbox)
 
@@ -61,8 +66,8 @@ class ScribberView():
 
         # Go!
         self.win.show_all()
-        self.find_box.hide()
-        self.find_replace_box.hide()
+        self.fix_find.hide()
+        self.fix_find_replace.hide()
         gtk.main()
 
     def new(self):
@@ -186,18 +191,26 @@ class ScribberView():
             self.view.get_buffer().insert_at_cursor(text)
 
     def find(self):
-        self.find_replace_box.hide()
-        if self.find_box.get_visible():
-            self.find_box.hide()
+        self.fix_find_replace.hide()
+
+        if self.fix_find.get_visible():
+            self.fix_find.hide()
+            self.view.get_buffer().stop_hilight_pattern()
+            self.win.set_focus(self.view)
         else:
-            self.find_box.show()
+            self.fix_find.show()
+            self.win.set_focus(self.find_box.txt_find)
 
     def find_replace(self):
-        self.find_box.hide()
-        if self.find_replace_box.get_visible():
-            self.find_replace_box.hide()
+        self.fix_find.hide()
+
+        if self.fix_find_replace.get_visible():
+            self.fix_find_replace.hide()
+            self.view.get_buffer().stop_hilight_pattern()
+            self.win.set_focus(self.view)
         else:
-            self.find_replace_box.show()
+            self.fix_find_replace.show()
+            self.win.set_focus(self.find_replace_box.txt_find)
 
     def show_ask_save_dialog(self):
         dialog = gtk.MessageDialog(parent=self.win, flags=0, 
@@ -393,14 +406,14 @@ to save your changes?')
 
     def _on_fullscreen_click(self, widget, data=None):
         if self.is_fullscreen:
-            self.unfullscreen()
+            self.win.unfullscreen()
             # Gtk doesnt provied a way to check a windows state, so we have to
             # keep track ourselves
             self.menu_bar.show()
             self.status_bar.show()
             self.is_fullscreen = False
         else:
-            self.fullscreen()
+            self.win.fullscreen()
             self.menu_bar.hide()
             self.status_bar.hide()
             self.is_fullscreen = True

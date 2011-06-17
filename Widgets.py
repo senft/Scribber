@@ -10,6 +10,7 @@ pygtk.require('2.0')
 import gtk
 import re
 import pango
+import collections
 
 
 class ScribberTextView(gtk.TextView):
@@ -69,6 +70,7 @@ class ScribberTextView(gtk.TextView):
         self.get_buffer().is_modified = False
 
     def _on_move_cursor(self, step_size, count, extend_selection, data=None):
+        print 'asd'
         self._focus_current_sentence()
 
     def _on_key_event(self, event, data=None):
@@ -167,29 +169,73 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self._update_markdown(self.get_start_iter())
         self._apply_tags = False
 
-    def hilight_find(self, needle):
+    def _find_all_matches(self, pattern, match_case=False, start=None,
+        end=None):
+        """ Returns a deque containg a tuple (start_iter, end_iter) for all
+            matches of 'pattern'. In order of there occurence starting from
+            current cursor position."""
         #TODO: When I search for 'foo bar baz' it should also match
         # 'foo *bar* baz'
-        start = self.get_start_iter()
-        end = self.get_end_iter()
-        text = start.get_text(end)
 
-        needle_re = re.compile(needle)
+        if start is None:
+            # Use current cursor position as start
+            search_start = self.get_iter_at_mark(self.get_insert())
+        else:
+            search_start = start
 
-        self.remove_tag_by_name('match', start, end)
+        if end is None:
+            search_end = self.get_end_iter()
+        else:
+            search_end = end
+
+        text = search_start.get_text(search_end)
+
+        # Used to buffer out current matches (for next/back buttons). Using a
+        # a deque for easy wrap-around
+        matches = collections.deque()
+
+        if match_case:
+            needle_re = re.compile(pattern)
+        else:
+            needle_re = re.compile(pattern, re.IGNORECASE)
 
         for match in needle_re.finditer(text):
-            mstart = start.copy()
-            mend = start.copy()
+            mstart = search_start.copy()
+            mend = search_start.copy()
 
             mstart.forward_chars(match.start())
             mend.forward_chars(match.end())
 
+            matches.append((mstart, mend))
+
+        # Now match from start to current cursor
+        if start is None and end is None:
+            matches_from_start = self._find_all_matches(pattern, match_case,
+                self.get_start_iter(), start)
+
+            matches.extend(matches_from_start)
+        return matches
+
+
+    def hilight_pattern(self, pattern, match_case=False):
+        self.remove_tag_by_name('match', self.get_start_iter(),
+            self.get_end_iter())
+
+        matches = self._find_all_matches(pattern, match_case)
+
+        if matches:
+            # If we have matches, we want to make the first match selected
+            self.select_range(*matches[0])
+
+        for mstart, mend in matches:
             self._apply_tags = True
             self.apply_tag_by_name('match', mstart, mend)
             self._apply_tags = False
 
-    def stop_hilight_find(self):
+        return matches
+
+
+    def stop_hilight_pattern(self):
         start = self.get_start_iter()
         end = self.get_end_iter()
         self.remove_tag_by_name('match', start, end)
@@ -312,48 +358,74 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
 class ScribberFindBox(gtk.HBox):
     def __init__(self, buffer):
-
-
-        gtk.HBox.__init__(self, False, 0)
-
-        #self.connect('on-show', focus_txt_find)
+        gtk.HBox.__init__(self, False, 4)
 
         self.buffer = buffer
-
-        self.btn_cancel = gtk.Button(label=None, stock=gtk.STOCK_CANCEL)
-        self.btn_cancel.connect('clicked', self.dispose)
 
         self.lbl_find = gtk.Label('Find: ')
         self.txt_find = gtk.Entry()
         self.txt_find.connect('changed', self.search)
+        self.txt_find.connect('key-press-event', self._on_key)
 
-        self.btn_next = gtk.Button(stock=gtk.STOCK_GO_BACK)
-        self.btn_back = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
+        self.btn_next = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
+        self.btn_next.connect('clicked', self.next)
+
+        self.btn_back = gtk.Button(stock=gtk.STOCK_GO_BACK)
+        self.btn_back.connect('clicked', self.back)
 
         self.chk_matchcase = gtk.CheckButton('Match case')
+        self.chk_matchcase.connect('toggled', self._on_toggle_match_case)
 
         self.add(self.lbl_find)
         self.add(self.txt_find)
-        self.add(self.btn_next)
         self.add(self.btn_back)
+        self.add(self.btn_next)
         self.add(self.chk_matchcase)
-        self.add(self.btn_cancel)
 
     def search(self, entry):
-        self.buffer.hilight_find(entry.get_text())
+        self.matches = self.buffer.hilight_pattern(entry.get_text(),
+            match_case=self.chk_matchcase.get_active())
 
-    def dispose(self, data=None):
-        self.buffer.stop_hilight_find()
-        self.hide()
+    def _on_key(self, widget, event):
+        if gtk.gdk.keyval_name(event.keyval) == 'Return':
+            self.next()
+
+    def _on_toggle_match_case(self, widget):
+        # Search again in match_case changed
+        self.search(self.txt_find)
+
+    def next(self, data=None):
+        if self.matches:
+            self.matches.rotate(-1)
+            start, end = self.matches[0]
+            self.buffer.select_range(start, end)
+
+    def back(self, data=None):
+        if self.matches:
+            self.matches.rotate()
+            start, end = self.matches[0]
+            self.buffer.select_range(start, end)
 
 
 class ScribberFindReplaceBox(ScribberFindBox):
     def __init__(self, buffer):
-        gtk.HBox.__init__(self, False, 0)
+        gtk.HBox.__init__(self, False, 4)
 
         self.buffer = buffer
 
-        self.btn_cancel = gtk.Button(label=None, stock=gtk.STOCK_CANCEL)
-        self.btn_cancel.connect('clicked', self.dispose)
+        self.lbl_find = gtk.Label('Find: ')
+        self.txt_find = gtk.Entry()
 
-        self.add(self.btn_cancel)
+        self.lbl_replace = gtk.Label('Replace: ')
+        self.txt_replace = gtk.Entry()
+
+        self.btn_next = gtk.Button(stock=gtk.STOCK_GO_BACK)
+        self.btn_back = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
+
+        self.add(self.lbl_find)
+        self.add(self.txt_find)
+
+        self.add(self.lbl_replace)
+        self.add(self.txt_replace)
+        self.add(self.btn_next)
+        self.add(self.btn_back)
