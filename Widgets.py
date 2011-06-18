@@ -477,8 +477,7 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
     def _on_replace_key(self, widget, event):
         if gtk.gdk.keyval_name(event.keyval) == 'Return':
-            # Replace!
-            pass
+            self.replace()
 
     def _on_replace_click(self, btn, data=None):
         self.replace()
