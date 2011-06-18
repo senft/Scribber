@@ -202,6 +202,24 @@ class ScribberTextBuffer(gtk.TextBuffer):
             matches.extend(matches_from_start)
         return matches
 
+    def replace_pattern(self, pattern, repl, start, end, match_case=False,
+        replace_all=False):
+
+        if start is None:
+            start = self.get_start_iter()
+
+        if end is None:
+            end = self.get_end_iter()
+        
+        text = start.get_text(end)
+
+        if replace_all:
+            text = re.sub(pattern, repl, text)
+            self.set_text(text)
+        else:
+            text = re.sub(pattern, repl, text, 1)
+            self.delete_selection(True, True)
+            self.insert_at_cursor(text)
 
     def hilight_pattern(self, pattern, match_case=False):
         self.remove_tag_by_name('match', self.get_start_iter(),
@@ -350,7 +368,7 @@ class ScribberFindBox(gtk.HBox):
 
         self.lbl_find = gtk.Label('Find: ')
         self.txt_find = gtk.Entry()
-        self.txt_find.connect('changed', self.search)
+        self.txt_find.connect('changed', self._on_type)
         self.txt_find.connect('key-press-event', self._on_key)
 
         self.btn_next = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
@@ -368,9 +386,12 @@ class ScribberFindBox(gtk.HBox):
         self.add(self.btn_next)
         self.add(self.chk_matchcase)
 
-    def search(self, entry):
-        self.matches = self.buffer.hilight_pattern(entry.get_text(),
+    def search(self, text):
+        self.matches = self.buffer.hilight_pattern(text, 
             match_case=self.chk_matchcase.get_active())
+
+    def _on_type(self, widget):
+        self.search(widget.get_text())
 
     def _on_key(self, widget, event):
         if gtk.gdk.keyval_name(event.keyval) == 'Return':
@@ -401,17 +422,70 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
         self.lbl_find = gtk.Label('Find: ')
         self.txt_find = gtk.Entry()
+        self.txt_find.connect('changed', self._on_find_type)
+        self.txt_find.connect('key-press-event', self._on_find_key)
 
         self.lbl_replace = gtk.Label('Replace: ')
         self.txt_replace = gtk.Entry()
+        self.txt_replace.connect('key-press-event', self._on_replace_key)
 
-        self.btn_next = gtk.Button(stock=gtk.STOCK_GO_BACK)
-        self.btn_back = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
+        self.btn_replace = gtk.Button('_Replace')
+        self.btn_replace.connect('clicked', self._on_replace_click)
+
+        self.btn_replace_all = gtk.Button('Replace a_ll')
+        self.btn_replace_all.connect('clicked', self._on_replace_all_click)
+
+        self.chk_matchcase = gtk.CheckButton('Match case')
+        self.chk_matchcase.connect('toggled', self._on_toggle_match_case)
+
+        self.btn_next = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
+        self.btn_next.connect('clicked', self.next)
+
+        self.btn_back = gtk.Button(stock=gtk.STOCK_GO_BACK)
+        self.btn_back.connect('clicked', self.back)
 
         self.add(self.lbl_find)
         self.add(self.txt_find)
 
+        self.add(self.btn_back)
+        self.add(self.btn_next)
+
         self.add(self.lbl_replace)
         self.add(self.txt_replace)
-        self.add(self.btn_next)
-        self.add(self.btn_back)
+
+        self.add(self.btn_replace)
+        self.add(self.btn_replace_all)
+
+        self.add(self.chk_matchcase)
+
+    def replace(self):
+        start, end = self.matches[0]
+        self.buffer.replace_pattern(self.txt_find.get_text(),
+            self.txt_replace.get_text(), start, end, self.chk_matchcase, replace_all=False)
+        self.search(self.txt_find.get_text())
+        
+    def replace_all(self):
+        self.buffer.replace_pattern(self.txt_find.get_text(),
+            self.txt_replace.get_text(), None, None, self.chk_matchcase, replace_all=True)
+
+    def _on_find_type(self, entry):
+        self.search(entry.get_text())
+
+    def _on_find_key(self, widget, event):
+        if gtk.gdk.keyval_name(event.keyval) == 'Return':
+            self.next()
+
+    def _on_replace_key(self, widget, event):
+        if gtk.gdk.keyval_name(event.keyval) == 'Return':
+            # Replace!
+            pass
+
+    def _on_replace_click(self, btn, data=None):
+        self.replace()
+
+    def _on_replace_all_click(self, btn, data=None):
+        self.replace_all()
+
+    def _on_toggle_match_case(self, widget):
+        # Search again if match_case changed
+        self.search(self.txt_find.get_text())

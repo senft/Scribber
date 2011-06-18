@@ -26,6 +26,7 @@ class ScribberView():
         self.filename = None
         self.exporter = ReSTExporter(self.view.get_buffer())
 
+
         self.view.get_buffer().connect('modified-changed',
             self._on_buffer_modified_change)
 
@@ -399,7 +400,7 @@ to save your changes?')
 
     def _on_findreplacem(self, data=None):
         self.find_replace()
-    
+
     def _on_buffer_modified_change(self, widget, data=None):
         if self.filename:
             filename = self.filename
@@ -407,9 +408,11 @@ to save your changes?')
             filename = 'Untitled'
 
         if self.view.get_buffer().get_modified():
-            self.win.set_title('Scribber - ' + filename + '*')
+            if not self.win.get_title().endswith('*'):
+                self.win.set_title('Scribber - ' + filename + ' *')
         else:
-            self.win.set_title('Scribber - ' + filename)
+            if self.win.get_title().endswith('*'):
+                self.win.set_title('Scribber - ' + filename)
 
     def _on_focus_click(self, widget, data=None):
         if self.view.focus:
