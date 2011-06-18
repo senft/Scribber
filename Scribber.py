@@ -242,11 +242,11 @@ to save your changes?')
         filem.set_submenu(filemenu)
 
         newm = gtk.ImageMenuItem(gtk.STOCK_NEW, agr)
-        newm.connect('activate', self._on_newm)
+        newm.connect('activate', self._on_menu_click)
         filemenu.append(newm)
 
         openm = gtk.ImageMenuItem(gtk.STOCK_OPEN, agr)
-        openm.connect('activate', self._on_openm)
+        openm.connect('activate', self._on_menu_click)
         filemenu.append(openm)
 
         filemenu.append(gtk.SeparatorMenuItem())
@@ -255,27 +255,27 @@ to save your changes?')
         key, mod = gtk.accelerator_parse("<Control>S")
         savem.add_accelerator("activate", agr, key,
             mod, gtk.ACCEL_VISIBLE)
-        savem.connect('activate', self._on_savem)
+        savem.connect('activate', self._on_menu_click)
         filemenu.append(savem)
 
         saveasm = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS)
         key, mod = gtk.accelerator_parse("<Control><Shift>S")
         saveasm.add_accelerator("activate", agr, key,
             mod, gtk.ACCEL_VISIBLE)
-        saveasm.connect('activate', self._on_saveasm)
+        saveasm.connect('activate', self._on_menu_click)
         filemenu.append(saveasm)
 
         filemenu.append(gtk.SeparatorMenuItem())
 
         exportm = gtk.MenuItem("Expor_t...")
-        exportm.connect('activate', self._on_exportm)
+        exportm.connect('activate', self._on_menu_click)
         filemenu.append(exportm)
 
         filemenu.append(gtk.SeparatorMenuItem())
 
-        exit = gtk.ImageMenuItem(gtk.STOCK_QUIT, agr)
-        exit.connect("activate", self._on_quitm)
-        filemenu.append(exit)
+        quitm = gtk.ImageMenuItem(gtk.STOCK_QUIT, agr)
+        quitm.connect("activate", self._on_menu_click)
+        filemenu.append(quitm)
 
         # Edit menu
         editmenu = gtk.Menu()
@@ -297,29 +297,29 @@ to save your changes?')
         editmenu.append(gtk.SeparatorMenuItem())
 
         cutm = gtk.ImageMenuItem(gtk.STOCK_CUT, agr)
-        cutm.connect("activate", self._on_cutm)
+        cutm.connect("activate", self._on_menu_click)
         editmenu.append(cutm)
 
         copym = gtk.ImageMenuItem(gtk.STOCK_COPY, agr)
-        copym.connect("activate", self._on_copym)
+        copym.connect("activate", self._on_menu_click)
         editmenu.append(copym)
 
         pastem = gtk.ImageMenuItem(gtk.STOCK_PASTE, agr)
-        pastem.connect("activate", self._on_pastem)
+        pastem.connect("activate", self._on_menu_click)
         editmenu.append(pastem)
 
         deletem = gtk.ImageMenuItem(gtk.STOCK_DELETE, agr)
-        deletem.connect("activate", self._on_deletem)
+        deletem.connect("activate", self._on_menu_click)
         editmenu.append(deletem)
 
         editmenu.append(gtk.SeparatorMenuItem())
 
         findm = gtk.ImageMenuItem(gtk.STOCK_FIND, agr)
-        findm.connect("activate", self._on_findm)
+        findm.connect("activate", self._on_menu_click)
         editmenu.append(findm)
 
         findreplacem = gtk.ImageMenuItem(gtk.STOCK_FIND_AND_REPLACE, agr)
-        findreplacem.connect("activate", self._on_findreplacem)
+        findreplacem.connect("activate", self._on_menu_click)
         editmenu.append(findreplacem)
 
         # Help menu
@@ -337,6 +337,23 @@ to save your changes?')
         menu_bar.append(filem)
         menu_bar.append(editm)
         menu_bar.append(qm)
+
+        self.menu_actions = {}
+
+        self.menu_actions[newm] = self.new
+        self.menu_actions[savem] = self.save
+        self.menu_actions[saveasm] = self.save_as
+        self.menu_actions[exportm] = self.export
+        self.menu_actions[openm] = self.open
+        self.menu_actions[quitm] = self.new
+
+        self.menu_actions[copym] = self.copy
+        self.menu_actions[cutm] = self.cut
+        self.menu_actions[pastem] = self.paste
+        self.menu_actions[deletem] = self.delete
+
+        self.menu_actions[findm] = self.find
+        self.menu_actions[findreplacem] = self.find_replace
 
         return menu_bar
 
@@ -364,41 +381,8 @@ to save your changes?')
 
         return sbarbox
 
-    def _on_newm(self, data=None):
-        self.new()
-
-    def _on_savem(self, data=None):
-        self.save()
-
-    def _on_saveasm(self, data=None):
-        self.save_as()
-
-    def _on_exportm(self, data=None):
-        self.export()
-
-    def _on_openm(self, data=None):
-        self.open()
-
-    def _on_quitm(self, data=None):
-        pass
-
-    def _on_copym(self, data=None):
-        self.copy()
-
-    def _on_cutm(self, data=None):
-        self.cut()
-
-    def _on_pastem(self, data=None):
-        self.paste()
-
-    def _on_deletem(self, data=None):
-        self.delete()
-
-    def _on_findm(self, data=None):
-        self.find()
-
-    def _on_findreplacem(self, data=None):
-        self.find_replace()
+    def _on_menu_click(self, widget, data=None):
+        self.menu_actions[widget]()
 
     def _on_buffer_modified_change(self, widget, data=None):
         if self.filename:
