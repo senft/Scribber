@@ -61,7 +61,6 @@ class ScribberTextView(gtk.TextView):
         # Success?
         return True
 
-
     def _on_move_cursor(self, step_size, count, extend_selection, data=None):
         self._focus_current_sentence()
 
@@ -96,7 +95,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
     def __init__(self):
         gtk.TextBuffer.__init__(self)
- 
+
         self.connect_after("insert-text", self._on_insert_text)
         self.connect_after("delete-range", self._on_delete_range)
         self.connect('apply-tag', self._on_apply_tag)
@@ -210,7 +209,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         if end is None:
             end = self.get_end_iter()
-        
+
         text = start.get_text(end)
 
         if replace_all:
@@ -237,7 +236,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
             self._apply_tags = False
 
         return matches
-
 
     def stop_hilight_pattern(self):
         start = self.get_start_iter()
@@ -360,6 +358,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.remove_tag_by_name("default", start, end)
         self.apply_tag_by_name("focus", start, end)
 
+
 class ScribberFindBox(gtk.HBox):
     def __init__(self, buffer):
         gtk.HBox.__init__(self, False, 4)
@@ -387,7 +386,7 @@ class ScribberFindBox(gtk.HBox):
         self.add(self.chk_matchcase)
 
     def search(self, text):
-        self.matches = self.buffer.hilight_pattern(text, 
+        self.matches = self.buffer.hilight_pattern(text,
             match_case=self.chk_matchcase.get_active())
 
     def _on_type(self, widget):
@@ -461,12 +460,14 @@ class ScribberFindReplaceBox(ScribberFindBox):
     def replace(self):
         start, end = self.matches[0]
         self.buffer.replace_pattern(self.txt_find.get_text(),
-            self.txt_replace.get_text(), start, end, self.chk_matchcase, replace_all=False)
+            self.txt_replace.get_text(), start, end, self.chk_matchcase,
+                replace_all=False)
         self.search(self.txt_find.get_text())
-        
+
     def replace_all(self):
         self.buffer.replace_pattern(self.txt_find.get_text(),
-            self.txt_replace.get_text(), None, None, self.chk_matchcase, replace_all=True)
+            self.txt_replace.get_text(), None, None, self.chk_matchcase,
+                replace_all=True)
 
     def _on_find_type(self, entry):
         self.search(entry.get_text())

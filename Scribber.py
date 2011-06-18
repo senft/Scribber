@@ -26,7 +26,6 @@ class ScribberView():
         self.filename = None
         self.exporter = ReSTExporter(self.view.get_buffer())
 
-
         self.view.get_buffer().connect('modified-changed',
             self._on_buffer_modified_change)
 
@@ -131,15 +130,14 @@ class ScribberView():
             print 'Export to: ', filename
 
             file, ext = os.path.splitext(filename)
-            
+
             if dialog.get_filter().get_name() == 'PDF-Document':
-               self.exporter.to_pdf(file)
+                self.exporter.to_pdf(file)
             elif dialog.get_filter().get_name() == 'Open-Office-Document':
-               self.exporter.to_odt(file)
+                self.exporter.to_odt(file)
 
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no file selected'
-
 
     def open(self, filename=None):
         response = None
@@ -149,9 +147,10 @@ class ScribberView():
         if filename is None:
             if not response == gtk.RESPONSE_CANCEL:
 
-                dialog = gtk.FileChooserDialog(parent=self.win, title='Open...',
-                        action=gtk.FILE_CHOOSER_ACTION_OPEN, buttons=(gtk.STOCK_CANCEL,
-                        gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+                dialog = gtk.FileChooserDialog(parent=self.win,
+                        title='Open...', action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                        gtk.STOCK_OPEN, gtk.RESPONSE_OK))
 
                 response = dialog.run()
 
@@ -217,7 +216,7 @@ class ScribberView():
             self.win.set_focus(self.find_replace_box.txt_find)
 
     def show_ask_save_dialog(self):
-        dialog = gtk.MessageDialog(parent=self.win, flags=0, 
+        dialog = gtk.MessageDialog(parent=self.win, flags=0,
                 type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
                 message_format='The document has been modified. Do you want \
 to save your changes?')
@@ -382,7 +381,7 @@ to save your changes?')
 
     def _on_quitm(self, data=None):
         pass
-        
+
     def _on_copym(self, data=None):
         self.copy()
 
