@@ -2,7 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-Widgets for Scribber
+All custom widgets used in Scribber.
+    * ScribberTextView is a gtk.TextView with some basic formatting and 
+      mechanisms to focus the current sentence
+    * ScribberTextBuffer is the underlying gtk.TextBuffer. It has automatic
+      Markdown-Syntax-Hilighting and features simple hilighting for find and 
+      replace
+    * ScribberFindBox is a simple gtk.HBox containing the usual widgets
+      used in a Find-Windget
+    * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
 """
 
 import pygtk
@@ -43,7 +51,7 @@ class ScribberTextView(gtk.TextView):
         # Line spacing
         self.set_pixels_inside_wrap(7)
 
-        self._focus_current_sentence()
+        self.focus_current_sentence()
 
     def open_file(self, filename):
         with open(filename, 'r') as f:
@@ -55,26 +63,28 @@ class ScribberTextView(gtk.TextView):
             self.get_buffer().get_start_iter(), '', 0)
 
         self.get_buffer().place_cursor(self.get_buffer().get_start_iter())
-        self._focus_current_sentence()
+        self.focus_current_sentence()
         self.get_buffer().set_modified(False)
 
         # Success?
         return True
 
-    def _on_move_cursor(self, step_size, count, extend_selection, data=None):
-        self._focus_current_sentence()
-
-    def _on_key_event(self, event, data=None):
-        self._focus_current_sentence()
-
-    def _on_button_event(self, event, data=None):
-        self._focus_current_sentence()
-
-    def _focus_current_sentence(self):
+    def focus_current_sentence(self):
         if self.focus:
             self.get_buffer().focus_current_sentence()
             self.scroll_to_mark(self.get_buffer().get_insert(), 0.0, True,
                 0.0, 0.5)
+
+    def _on_move_cursor(self, widet, step_size, count, extend_selection,
+        data=None):
+
+        self.focus_current_sentence()
+
+    def _on_key_event(self, widget, event, data=None):
+        self.focus_current_sentence()
+
+    def _on_button_event(self, widget, event, data=None):
+        self.focus_current_sentence()
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
@@ -141,7 +151,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
             self.insert_at_cursor("* ")
             # else
             #   clear line
-        if iter.has_tag(self.tag_table_sorted) and text == "\n":
+        elif iter.has_tag(self.tag_table_sorted) and text == "\n":
             # Same
             self.insert_at_cursor("\d ")
 
@@ -221,6 +231,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
             self.insert_at_cursor(text)
 
     def hilight_pattern(self, pattern, match_case=False):
+        """ Hilights all matches in buffer and selects the match next to
+            current cursor position. """
         self.remove_tag_by_name('match', self.get_start_iter(),
             self.get_end_iter())
 
@@ -362,13 +374,15 @@ class ScribberTextBuffer(gtk.TextBuffer):
 class ScribberFindBox(gtk.HBox):
     def __init__(self, buffer):
         gtk.HBox.__init__(self, False, 4)
-
+        self.matches = None
         self.buffer = buffer
+        self.init_gui()
 
+    def init_gui(self):
         self.lbl_find = gtk.Label('Find: ')
         self.txt_find = gtk.Entry()
-        self.txt_find.connect('changed', self._on_type)
-        self.txt_find.connect('key-press-event', self._on_key)
+        self.txt_find.connect('changed', self._on_find_type)
+        self.txt_find.connect('key-press-event', self._on_key_press)
 
         self.btn_next = gtk.Button(stock=gtk.STOCK_GO_FORWARD)
         self.btn_next.connect('clicked', self.next)
@@ -385,28 +399,33 @@ class ScribberFindBox(gtk.HBox):
         self.add(self.btn_next)
         self.add(self.chk_matchcase)
 
-    def search(self, text):
+    def hilight_search(self, text):
         self.matches = self.buffer.hilight_pattern(text,
             match_case=self.chk_matchcase.get_active())
 
-    def _on_type(self, widget):
-        self.search(widget.get_text())
+    def _on_find_type(self, widget):
+        """ Called when text in txt_find changes """
+        self.hilight_search(widget.get_text())
 
-    def _on_key(self, widget, event):
-        if gtk.gdk.keyval_name(event.keyval) == 'Return':
-            self.next()
+    def _on_key_press(self, widget, event):
+        if widget == self.txt_find:
+            if gtk.gdk.keyval_name(event.keyval) == 'Return':
+                # <Return> in txt_find
+                self.next()
 
     def _on_toggle_match_case(self, widget):
         # Search again in match_case changed
-        self.search(self.txt_find)
+        self.hilight_search(self.txt_find.get_text())
 
     def next(self, data=None):
+        """ Selects next match """
         if self.matches:
             self.matches.rotate(-1)
             start, end = self.matches[0]
             self.buffer.select_range(start, end)
 
     def back(self, data=None):
+        """ Selects last match """
         if self.matches:
             self.matches.rotate()
             start, end = self.matches[0]
@@ -414,19 +433,15 @@ class ScribberFindBox(gtk.HBox):
 
 
 class ScribberFindReplaceBox(ScribberFindBox):
-    def __init__(self, buffer):
-        gtk.HBox.__init__(self, False, 4)
-
-        self.buffer = buffer
-
+    def init_gui(self):
         self.lbl_find = gtk.Label('Find: ')
         self.txt_find = gtk.Entry()
         self.txt_find.connect('changed', self._on_find_type)
-        self.txt_find.connect('key-press-event', self._on_find_key)
+        self.txt_find.connect('key-press-event', self._on_key_press)
 
         self.lbl_replace = gtk.Label('Replace: ')
         self.txt_replace = gtk.Entry()
-        self.txt_replace.connect('key-press-event', self._on_replace_key)
+        self.txt_replace.connect('key-press-event', self._on_key_press)
 
         self.btn_replace = gtk.Button('_Replace')
         self.btn_replace.connect('clicked', self._on_replace_click)
@@ -458,34 +473,37 @@ class ScribberFindReplaceBox(ScribberFindBox):
         self.add(self.chk_matchcase)
 
     def replace(self):
+        """ Replaces current match. Out current match is always
+            self.matches[0] because we rotate all matches in self.matches."""
+
         start, end = self.matches[0]
         self.buffer.replace_pattern(self.txt_find.get_text(),
             self.txt_replace.get_text(), start, end, self.chk_matchcase,
                 replace_all=False)
-        self.search(self.txt_find.get_text())
+        # When we replaced pattern somewhere, jump to next occurence of
+        # pattern
+        self.hilight_search(self.txt_find.get_text())
 
     def replace_all(self):
         self.buffer.replace_pattern(self.txt_find.get_text(),
-            self.txt_replace.get_text(), None, None, self.chk_matchcase,
-                replace_all=True)
+            self.txt_replace.get_text(), start=None, end=None,
+                match_case=self.chk_matchcase, replace_all=True)
 
-    def _on_find_type(self, entry):
-        self.search(entry.get_text())
-
-    def _on_find_key(self, widget, event):
+    def _on_key_press(self, widget, event, data=None):
         if gtk.gdk.keyval_name(event.keyval) == 'Return':
-            self.next()
+            if widget == self.txt_find:
+                # <Return> in txt_find
+                self.next()
+            elif widget == self.txt_replace:
+                # <Return> in txt_replace
+                self.replace()
 
-    def _on_replace_key(self, widget, event):
-        if gtk.gdk.keyval_name(event.keyval) == 'Return':
-            self.replace()
-
-    def _on_replace_click(self, btn, data=None):
+    def _on_replace_click(self, widget, data=None):
         self.replace()
 
-    def _on_replace_all_click(self, btn, data=None):
+    def _on_replace_all_click(self, widget, data=None):
         self.replace_all()
 
     def _on_toggle_match_case(self, widget):
         # Search again if match_case changed
-        self.search(self.txt_find.get_text())
+        self.hilight_search(self.txt_find.get_text())

@@ -2,21 +2,34 @@
 # -*- coding: utf-8 -*-
 
 """
-Scribber, a text editor that focuses on minimalism.
+Scribber, a simple text editor that focuses on minimalism. It has basic
+text editor features, Markdown-Syntax-Hilighting, Export to PDF/ODT. 
 
-Icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
+Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
 """
 
 import pygtk
 pygtk.require('2.0')
 import gtk
 import os
+import sys
+
 from ReSTExporter import ReSTExporter
 from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox
 
 
+__author__ = 'Julian Wulfheide'
+__copyright__ = 'Copyright 2011, Julian Wulfheide'
+__credits__ = ['Julian Wulfheide', ]
+__license__ = ''
+__maintainer__ = 'Julian Wulfheide'
+__version__ = '0.1'
+__email__ = 'ju.wulfheide@gmail.com'
+__status__ = 'Development'
+
+
 class ScribberView():
-    def __init__(self):
+    def __init__(self, filename=None):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
@@ -43,6 +56,7 @@ class ScribberView():
         scrolled_window.add(self.view)
 
         self.find_box = ScribberFindBox(self.view.get_buffer())
+
         self.fix_find = gtk.Fixed()
         self.fix_find.add(self.find_box)
 
@@ -65,7 +79,8 @@ class ScribberView():
         #check = gtkspell.Spell(view)
         #check.set_language("de_DE")
 
-        self.open("default.txt")
+        if filename:
+            self.open(filename)
 
         # Go!
         self.win.show_all()
@@ -193,7 +208,7 @@ class ScribberView():
         if text:
             self.view.get_buffer().insert_at_cursor(text)
 
-    def find(self):
+    def toggle_find_box(self):
         self.fix_find_replace.hide()
 
         if self.fix_find.get_visible():
@@ -204,7 +219,7 @@ class ScribberView():
             self.fix_find.show()
             self.win.set_focus(self.find_box.txt_find)
 
-    def find_replace(self):
+    def toggle_find_replace_box(self):
         self.fix_find.hide()
 
         if self.fix_find_replace.get_visible():
@@ -215,11 +230,24 @@ class ScribberView():
             self.fix_find_replace.show()
             self.win.set_focus(self.find_replace_box.txt_find)
 
+    def show_about(self):
+        dialog = gtk.AboutDialog()
+        dialog.set_property('program-name', 'Scribber')
+        dialog.set_property('version', __version__)
+        dialog.set_property('copyright', __copyright__)
+        dialog.set_property('license', __license__)
+        dialog.set_property('comments', __doc__)
+
+        dialog.show()
+
     def show_ask_save_dialog(self):
+        """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to
+            save."""
+
         dialog = gtk.MessageDialog(parent=self.win, flags=0,
                 type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
-                message_format='The document has been modified. Do you want \
-to save your changes?')
+                message_format='The document has been modified. Do you want '
+                               'to save your changes?')
 
         dialog.add_button('Cancel', gtk.RESPONSE_CANCEL)
         response = dialog.run()
@@ -228,6 +256,7 @@ to save your changes?')
             self.save()
 
         dialog.destroy()
+        # Return the responso so we can react on a REPONSE_CANCEL elsewere
         return response
 
     def create_menu_bar(self):
@@ -253,14 +282,14 @@ to save your changes?')
 
         savem = gtk.ImageMenuItem(gtk.STOCK_SAVE)
         key, mod = gtk.accelerator_parse("<Control>S")
-        savem.add_accelerator("activate", agr, key,
+        savem.add_accelerator('activate', agr, key,
             mod, gtk.ACCEL_VISIBLE)
         savem.connect('activate', self._on_menu_click)
         filemenu.append(savem)
 
         saveasm = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS)
         key, mod = gtk.accelerator_parse("<Control><Shift>S")
-        saveasm.add_accelerator("activate", agr, key,
+        saveasm.add_accelerator('activate', agr, key,
             mod, gtk.ACCEL_VISIBLE)
         saveasm.connect('activate', self._on_menu_click)
         filemenu.append(saveasm)
@@ -274,7 +303,7 @@ to save your changes?')
         filemenu.append(gtk.SeparatorMenuItem())
 
         quitm = gtk.ImageMenuItem(gtk.STOCK_QUIT, agr)
-        quitm.connect("activate", self._on_menu_click)
+        quitm.connect('activate', self._on_menu_click)
         filemenu.append(quitm)
 
         # Edit menu
@@ -284,42 +313,42 @@ to save your changes?')
 
         undom = gtk.ImageMenuItem(gtk.STOCK_UNDO, agr)
         key, mod = gtk.accelerator_parse("<Control>Z")
-        undom.add_accelerator("activate", agr, key,
+        undom.add_accelerator('activate', agr, key,
             mod, gtk.ACCEL_VISIBLE)
         editmenu.append(undom)
 
         redom = gtk.ImageMenuItem(gtk.STOCK_REDO, agr)
         key, mod = gtk.accelerator_parse("<Control>Y")
-        redom.add_accelerator("activate", agr, key,
+        redom.add_accelerator('activate', agr, key,
             mod, gtk.ACCEL_VISIBLE)
         editmenu.append(redom)
 
         editmenu.append(gtk.SeparatorMenuItem())
 
         cutm = gtk.ImageMenuItem(gtk.STOCK_CUT, agr)
-        cutm.connect("activate", self._on_menu_click)
+        cutm.connect('activate', self._on_menu_click)
         editmenu.append(cutm)
 
         copym = gtk.ImageMenuItem(gtk.STOCK_COPY, agr)
-        copym.connect("activate", self._on_menu_click)
+        copym.connect('activate', self._on_menu_click)
         editmenu.append(copym)
 
         pastem = gtk.ImageMenuItem(gtk.STOCK_PASTE, agr)
-        pastem.connect("activate", self._on_menu_click)
+        pastem.connect('activate', self._on_menu_click)
         editmenu.append(pastem)
 
         deletem = gtk.ImageMenuItem(gtk.STOCK_DELETE, agr)
-        deletem.connect("activate", self._on_menu_click)
+        deletem.connect('activate', self._on_menu_click)
         editmenu.append(deletem)
 
         editmenu.append(gtk.SeparatorMenuItem())
 
         findm = gtk.ImageMenuItem(gtk.STOCK_FIND, agr)
-        findm.connect("activate", self._on_menu_click)
+        findm.connect('activate', self._on_menu_click)
         editmenu.append(findm)
 
         findreplacem = gtk.ImageMenuItem(gtk.STOCK_FIND_AND_REPLACE, agr)
-        findreplacem.connect("activate", self._on_menu_click)
+        findreplacem.connect('activate', self._on_menu_click)
         editmenu.append(findreplacem)
 
         # Help menu
@@ -331,6 +360,7 @@ to save your changes?')
         qmenu.append(helpm)
 
         aboutm = gtk.ImageMenuItem(gtk.STOCK_ABOUT, agr)
+        aboutm.connect('activate', self._on_menu_click)
         qmenu.append(aboutm)
 
         # Add stuff
@@ -352,8 +382,10 @@ to save your changes?')
         self.menu_actions[pastem] = self.paste
         self.menu_actions[deletem] = self.delete
 
-        self.menu_actions[findm] = self.find
-        self.menu_actions[findreplacem] = self.find_replace
+        self.menu_actions[findm] = self.toggle_find_box
+        self.menu_actions[findreplacem] = self.toggle_find_replace_box
+
+        self.menu_actions[aboutm] = self.show_about
 
         return menu_bar
 
@@ -366,6 +398,7 @@ to save your changes?')
             gtk.image_new_from_file("system-search.png"))
         self.button_focus.set_active(True)
         self.button_focus.connect("clicked", self._on_focus_click)
+
         self.button_fullscreen = gtk.ToggleButton("Fullscreen")
         self.button_fullscreen.set_image(
                 gtk.image_new_from_file("view-fullscreen.png"))
@@ -382,9 +415,13 @@ to save your changes?')
         return sbarbox
 
     def _on_menu_click(self, widget, data=None):
+        """ Called when clicked on a menu item. """
         self.menu_actions[widget]()
 
     def _on_buffer_modified_change(self, widget, data=None):
+        """ Called when the TextBuffer of our TextView gets modified.
+            Only used to set the right window title (* when Buffer is
+            modified)."""
         if self.filename:
             filename = self.filename
         else:
@@ -405,10 +442,10 @@ to save your changes?')
         self.view.focus = not self.view.focus
 
     def _on_fullscreen_click(self, widget, data=None):
+        # Gtk doesnt provied a way to check a windows state, so we have to
+        # keep track ourselves
         if self.is_fullscreen:
             self.win.unfullscreen()
-            # Gtk doesnt provied a way to check a windows state, so we have to
-            # keep track ourselves
             self.menu_bar.show()
             self.status_bar.show()
             self.is_fullscreen = False
@@ -418,8 +455,11 @@ to save your changes?')
             self.status_bar.hide()
             self.is_fullscreen = True
 
-    def _on_window_state_event(self, event, data=None):
-        if data.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
+    def _on_window_state_event(self, widget, event, data=None):
+        """ Called when the window state changes (Fullscreen/Unfullscreen).
+            Needed to determine the correct state for the fullscreen button,
+            because fullscreen can be set externally."""
+        if event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
             self.button_fullscreen.set_active(True)
             self.is_fullscreen = True
         else:
@@ -427,7 +467,7 @@ to save your changes?')
             self.is_fullscreen = False
 
     def _on_window_resize(self, requisition, data=None):
-        self.view.get_buffer().focus_current_sentence()
+        self.view.focus_current_sentence()
 
     def _delete_event(self, widget, event, data=None):
         # When this returns True we dont quit
@@ -442,4 +482,7 @@ to save your changes?')
 
 
 if __name__ == '__main__':
-    ScribberView()
+    if len(sys.argv) > 1:
+        ScribberView(sys.argv[1])
+    else:
+        ScribberView()
