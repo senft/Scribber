@@ -31,6 +31,7 @@ __status__ = 'Development'
 class ScribberView():
     def __init__(self, filename=None):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.win.set_default_size(500, 500)
 
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
@@ -58,8 +59,10 @@ class ScribberView():
         self.view.get_buffer().connect('modified-changed',
             self._on_buffer_modified_change)
 
-#        # To hide or show the bars
-        self.view.get_buffer().connect('changed', self._on_buffer_changed)
+        # To hide or show the bars
+        #self.view.connect('key-press-event', self._on_buffer_changed)
+        self.view.get_buffer().connect("insert-text", self._on_buffer_changed)
+        self.view.get_buffer().connect("delete-range", self._on_buffer_changed)
 
         scrolled_window = gtk.ScrolledWindow()
         #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -74,21 +77,19 @@ class ScribberView():
         self.fix_find_replace = gtk.Fixed()
         self.fix_find_replace.add(self.find_replace_box)
 
-#        vbox = gtk.VBox(False, 2)
+        vbox = gtk.VBox(False, 2)
 
         self.menu_bar = self.create_menu_bar()
         self.status_bar = self.create_status_bar()
 
-#        vbox.pack_start(self.menu_bar, False, False, 0)
-#        vbox.pack_start(scrolled_window, True, True, 0)
-#        vbox.pack_end(self.status_bar, False, False, 0)
-#        vbox.pack_end(self.fix_find, False, False, 0)
-#        vbox.pack_end(self.fix_find_replace, False, False, 0)
+        vbox.pack_start(scrolled_window, True, True, 0)
+        vbox.pack_end(self.fix_find, False, False, 0)
+        vbox.pack_end(self.fix_find_replace, False, False, 0)
 
 #        self.win.add(vbox)
 
         self.fade_box = ScribberFadeHBox()
-        self.fade_box.add_main(scrolled_window)
+        self.fade_box.add_main(vbox)
         self.fade_box.add_header(self.menu_bar)
         self.fade_box.add_footer(self.status_bar)
 
@@ -99,8 +100,8 @@ class ScribberView():
 
         # Go!
         self.win.show_all()
-#        self.fix_find.hide()
-#        self.fix_find_replace.hide()
+        self.fix_find.hide()
+        self.fix_find_replace.hide()
         gtk.main()
 
     def new(self):
@@ -437,14 +438,10 @@ class ScribberView():
 
     def _on_mouse_motion(self, widget, event, data=None):
         self.win.set_decorated(True)
-        #self.menu_bar.show()
-        #self.status_bar.show()
         self.fade_box.fadein()
     
-    def _on_buffer_changed(self, widget):
+    def _on_buffer_changed(self, buf, iter, text, length=None):
         self.win.set_decorated(False)
-        #self.menu_bar.hide()
-        #self.status_bar.hide()
         self.fade_box.fadeout()
 
     def _on_buffer_modified_change(self, widget, data=None):
