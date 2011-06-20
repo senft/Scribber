@@ -15,7 +15,7 @@ import os
 import sys
 
 from ReSTExporter import ReSTExporter
-from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox
+from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox, ScribberFadeHBox
 
 
 __author__ = 'Julian Wulfheide'
@@ -31,16 +31,18 @@ __status__ = 'Development'
 class ScribberView():
     def __init__(self, filename=None):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
+
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
 
         self.view = ScribberTextView()
-        self.is_fullscreen = False
-        self.filename = None
-        self.exporter = ReSTExporter(self.view.get_buffer())
 
-        self.view.get_buffer().connect('modified-changed',
-            self._on_buffer_modified_change)
+        # GTK doesnt provide a way to check wether a window is fullscreen or
+        # no. So we have to keep track ourselves.
+        self.is_fullscreen = False
+
+        self.filename = filename
+        self.exporter = ReSTExporter(self.view.get_buffer())
 
         self.win.set_title("Scribber - Untitled")
         self.win.set_destroy_with_parent(False)
@@ -50,9 +52,17 @@ class ScribberView():
         self.win.connect('destroy', self.destroy)
         self.win.connect('window-state-event', self._on_window_state_event)
         self.win.connect('size-request', self._on_window_resize)
+        self.win.connect('motion-notify-event', self._on_mouse_motion)
+
+        # To keep track of wether the document is modified or not.
+        self.view.get_buffer().connect('modified-changed',
+            self._on_buffer_modified_change)
+
+#        # To hide or show the bars
+        self.view.get_buffer().connect('changed', self._on_buffer_changed)
 
         scrolled_window = gtk.ScrolledWindow()
-        scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.view)
 
         self.find_box = ScribberFindBox(self.view.get_buffer())
@@ -64,28 +74,33 @@ class ScribberView():
         self.fix_find_replace = gtk.Fixed()
         self.fix_find_replace.add(self.find_replace_box)
 
-        vbox = gtk.VBox(False, 2)
+#        vbox = gtk.VBox(False, 2)
 
         self.menu_bar = self.create_menu_bar()
         self.status_bar = self.create_status_bar()
 
-        vbox.pack_start(self.menu_bar, False, False, 0)
-        vbox.pack_start(scrolled_window, True, True, 0)
-        vbox.pack_start(self.fix_find, False, False, 0)
-        vbox.pack_start(self.fix_find_replace, False, False, 0)
-        vbox.pack_end(self.status_bar, False, False, 0)
-        self.win.add(vbox)
+#        vbox.pack_start(self.menu_bar, False, False, 0)
+#        vbox.pack_start(scrolled_window, True, True, 0)
+#        vbox.pack_end(self.status_bar, False, False, 0)
+#        vbox.pack_end(self.fix_find, False, False, 0)
+#        vbox.pack_end(self.fix_find_replace, False, False, 0)
 
-        #check = gtkspell.Spell(view)
-        #check.set_language("de_DE")
+#        self.win.add(vbox)
 
-        if filename:
+        self.fade_box = ScribberFadeHBox()
+        self.fade_box.add_main(scrolled_window)
+        self.fade_box.add_header(self.menu_bar)
+        self.fade_box.add_footer(self.status_bar)
+
+        self.win.add(self.fade_box)
+
+        if self.filename:
             self.open(filename)
 
         # Go!
         self.win.show_all()
-        self.fix_find.hide()
-        self.fix_find_replace.hide()
+#        self.fix_find.hide()
+#        self.fix_find_replace.hide()
         gtk.main()
 
     def new(self):
@@ -232,13 +247,15 @@ class ScribberView():
 
     def show_about(self):
         dialog = gtk.AboutDialog()
-        dialog.set_property('program-name', 'Scribber')
-        dialog.set_property('version', __version__)
-        dialog.set_property('copyright', __copyright__)
-        dialog.set_property('license', __license__)
-        dialog.set_property('comments', __doc__)
+        dialog.set_name( 'Scribber')
+        dialog.set_version( __version__)
+        dialog.set_copyright(__copyright__)
+        dialog.set_license(__license__)
+        dialog.set_comments("Scribber is a simple text editor.")
+        dialog.set_website("website")
+        dialog.connect("response", lambda d, r: d.destroy())
 
-        dialog.show()
+        dialog.run()
 
     def show_ask_save_dialog(self):
         """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to
@@ -418,6 +435,18 @@ class ScribberView():
         """ Called when clicked on a menu item. """
         self.menu_actions[widget]()
 
+    def _on_mouse_motion(self, widget, event, data=None):
+        self.win.set_decorated(True)
+        #self.menu_bar.show()
+        #self.status_bar.show()
+        self.fade_box.fadein()
+    
+    def _on_buffer_changed(self, widget):
+        self.win.set_decorated(False)
+        #self.menu_bar.hide()
+        #self.status_bar.hide()
+        self.fade_box.fadeout()
+
     def _on_buffer_modified_change(self, widget, data=None):
         """ Called when the TextBuffer of our TextView gets modified.
             Only used to set the right window title (* when Buffer is
@@ -446,17 +475,13 @@ class ScribberView():
         # keep track ourselves
         if self.is_fullscreen:
             self.win.unfullscreen()
-            self.menu_bar.show()
-            self.status_bar.show()
             self.is_fullscreen = False
         else:
             self.win.fullscreen()
-            self.menu_bar.hide()
-            self.status_bar.hide()
             self.is_fullscreen = True
 
     def _on_window_state_event(self, widget, event, data=None):
-        """ Called when the window state changes (Fullscreen/Unfullscreen).
+        """ Called when the window state changes (e.g. Fullscreen/Unfullscreen).
             Needed to determine the correct state for the fullscreen button,
             because fullscreen can be set externally."""
         if event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:

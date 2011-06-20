@@ -16,6 +16,7 @@ All custom widgets used in Scribber.
 import pygtk
 pygtk.require('2.0')
 import gtk
+import gobject
 import re
 import pango
 import collections
@@ -29,11 +30,11 @@ class ScribberTextView(gtk.TextView):
 
         self.set_buffer(ScribberTextBuffer())
 
-        self.connect_after('key-press-event', self._on_key_event)
-        self.connect('key-release-event', self._on_key_event)
-        self.connect_after('button-press-event', self._on_button_event)
-        self.connect('button-release-event', self._on_button_event)
-        self.connect('move-cursor', self._on_move_cursor)
+#        self.connect_after('key-press-event', self._on_key_event)
+#        self.connect('key-release-event', self._on_key_event)
+#        self.connect_after('button-press-event', self._on_button_event)
+#        self.connect('button-release-event', self._on_button_event)
+#        self.connect('move-cursor', self._on_move_cursor)
 
         font = pango.FontDescription("Bitstream 12")
         self.modify_font(font)
@@ -106,9 +107,9 @@ class ScribberTextBuffer(gtk.TextBuffer):
     def __init__(self):
         gtk.TextBuffer.__init__(self)
 
-        self.connect_after("insert-text", self._on_insert_text)
-        self.connect_after("delete-range", self._on_delete_range)
-        self.connect('apply-tag', self._on_apply_tag)
+#        self.connect_after("insert-text", self._on_insert_text)
+#        self.connect_after("delete-range", self._on_delete_range)
+#        self.connect('apply-tag', self._on_apply_tag)
 
         self.tag_default = self.create_tag("default", foreground="#888888")
         self.tag_focus = self.create_tag("focus", foreground="#000000")
@@ -507,3 +508,86 @@ class ScribberFindReplaceBox(ScribberFindBox):
     def _on_toggle_match_case(self, widget):
         # Search again if match_case changed
         self.hilight_search(self.txt_find.get_text())
+
+
+class ScribberFadeHBox(gtk.Fixed):
+    def __init__(self):
+        gtk.Fixed.__init__(self)
+        self.connect('size-allocate', self.do_size_allocate)
+        self.header_offset = 0 
+        self.footer_offset = 0
+
+        self.main = None
+        self.header = None
+        self.footer = None
+
+    def add_header(self, widget):
+        self.header = widget
+        self.add(self.header)
+        
+    def add_footer(self, widget):
+        self.footer = widget
+        self.add(self.footer)
+
+    def add_main(self, widget):
+        self.main = widget
+        self.add(self.main)
+       
+    def do_size_allocate(self, widget, event, data=None):
+        fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
+        header_x, header_y, header_width, header_height = self.header.get_allocation()
+        view_x, view_y, view_width, view_height = self.main.get_allocation()
+        footer_x, footer_y, footer_width, footer_height = self.footer.get_allocation()
+
+        self.header.size_allocate((0, 0 - self.header_offset, fixed_width, header_height))
+
+        self.main.size_allocate((0, header_height - self.header_offset, fixed_width,
+            fixed_height - header_height - footer_height + self.header_offset + self.footer_offset))
+
+        #self.main.size_allocate((0, header_height - self.header_offset, 400, 400))
+
+
+        self.footer.size_allocate((0, fixed_height - footer_height + self.footer_offset,
+            fixed_width, footer_height))
+
+    def fadeout(self):
+        gobject.timeout_add(10, self._fadeout)
+
+    def fadein(self):
+        gobject.timeout_add(10, self._fadein)
+
+    def _fadeout(self):
+        header_x, header_y, header_width, header_height = self.header.get_allocation()
+        footer_x, footer_y, footer_width, footer_height = self.footer.get_allocation()
+        mod_mb = False
+        mod_sb = False
+
+        if header_height > self.header_offset:
+            self.header_offset += 1
+            mod_mb = True
+
+        if footer_height > self.footer_offset:
+            self.footer_offset += 1
+            mod_sb = True
+
+        self.do_size_allocate(None, None, None)
+        return mod_mb or mod_sb
+
+    def _fadein(self):
+        header_x, header_y, header_width, header_height = self.header.get_allocation()
+        footer_x, footer_y, footer_width, footer_height = self.footer.get_allocation()
+        mod_mb = False
+        mod_sb = False
+
+        if self.header_offset > 0:
+            self.header_offset -= 1
+            mod_mb = True
+
+        if self.footer_offset > 0:
+            self.footer_offset -= 1
+            mod_sb = True
+
+        self.do_size_allocate(None, None, None)
+        return mod_mb or mod_sb
+
+
