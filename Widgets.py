@@ -537,6 +537,7 @@ class ScribberFadeHBox(gtk.Fixed):
         self.add(self.main)
        
     def on_size_allocate(self, widget, event, data=None):
+        print 'asd'
         fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
         header_x, header_y, header_width, header_height = \
             self.header.get_allocation()
@@ -544,15 +545,17 @@ class ScribberFadeHBox(gtk.Fixed):
         footer_x, footer_y, footer_width, footer_height = \
             self.footer.get_allocation()
 
-        self.header.size_allocate((0, 0 - self.header_offset, fixed_width,
-            header_height))
+        if self.header.get_visible():
+            self.header.size_allocate((0, 0 - self.header_offset, fixed_width,
+                header_height))
 
         self.main.size_allocate((0, header_height - self.header_offset,
             fixed_width, fixed_height - header_height - footer_height +
             self.header_offset + self.footer_offset))
 
-        self.footer.size_allocate((0, fixed_height - footer_height +
-            self.footer_offset, fixed_width, footer_height))
+        if self.footer.get_visible():
+            self.footer.size_allocate((0, fixed_height - footer_height +
+                self.footer_offset, fixed_width, footer_height))
 
     def fadeout(self):
         if self.header.get_visible():

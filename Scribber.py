@@ -31,7 +31,7 @@ __status__ = 'Development'
 class ScribberView():
     def __init__(self, filename=None):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.win.set_default_size(500, 500)
+        self.win.set_size_request(500, 500)
 
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
@@ -68,6 +68,8 @@ class ScribberView():
         #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.view)
 
+        #scrolled_window.set_resize_mode(gtk.RESIZE_PARENT)
+
         self.find_box = ScribberFindBox(self.view.get_buffer())
 
         self.fix_find = gtk.Fixed()
@@ -86,22 +88,23 @@ class ScribberView():
         vbox.pack_end(self.fix_find, False, False, 0)
         vbox.pack_end(self.fix_find_replace, False, False, 0)
 
-#        self.win.add(vbox)
-
         self.fade_box = ScribberFadeHBox()
         self.fade_box.add_main(vbox)
         self.fade_box.add_header(self.menu_bar)
         self.fade_box.add_footer(self.status_bar)
 
-        self.win.add(self.fade_box)
+        #self.fade_box.set_resize_mode(gtk.RESIZE_QUEUE)
 
-        if self.filename:
-            self.open(filename)
+        self.win.add(self.fade_box)
 
         # Go!
         self.win.show_all()
         self.fix_find.hide()
         self.fix_find_replace.hide()
+
+        if self.filename:
+            self.open(filename)
+
         gtk.main()
 
     def new(self):
