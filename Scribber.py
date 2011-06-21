@@ -156,7 +156,6 @@ class ScribberView():
         dialog.add_filter(filter_odt)
 
         response = dialog.run()
-        dialog.destroy()
 
         if response == gtk.RESPONSE_OK:
             filename = dialog.get_filename()
@@ -171,6 +170,8 @@ class ScribberView():
 
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no file selected'
+
+        dialog.destroy()
 
     def open(self, filename=None):
         response = None
@@ -259,6 +260,10 @@ class ScribberView():
         dialog.connect("response", lambda d, r: d.destroy())
 
         dialog.run()
+
+    def show_help(self):
+        print 'asd'
+        ScribberView('help.txt')
 
     def show_ask_save_dialog(self):
         """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to
@@ -377,6 +382,7 @@ class ScribberView():
         qm.set_submenu(qmenu)
 
         helpm = gtk.ImageMenuItem(gtk.STOCK_HELP, agr)
+        helpm.connect('activate', self._on_menu_click)
         qmenu.append(helpm)
 
         aboutm = gtk.ImageMenuItem(gtk.STOCK_ABOUT, agr)
@@ -406,6 +412,7 @@ class ScribberView():
         self.menu_actions[findreplacem] = self.toggle_find_replace_box
 
         self.menu_actions[aboutm] = self.show_about
+        self.menu_actions[helpm] = self.show_help
 
         return menu_bar
 
@@ -457,7 +464,7 @@ class ScribberView():
 
         if self.view.get_buffer().get_modified():
             if not self.win.get_title().endswith('*'):
-                self.win.set_title('Scribber - ' + filename + ' *')
+                self.win.set_title('Scribber - ' + filename + '*')
         else:
             if self.win.get_title().endswith('*'):
                 self.win.set_title('Scribber - ' + filename)

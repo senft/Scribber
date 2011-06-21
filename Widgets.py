@@ -90,19 +90,41 @@ class ScribberTextView(gtk.TextView):
 
 class ScribberTextBuffer(gtk.TextBuffer):
 
-    patterns = [['heading1', re.compile('\#(?!\#) '), re.compile('\n'), 1],
-                ['heading2', re.compile('\#{2}(?!\#) '), re.compile('\n'), 1],
-                ['heading3', re.compile('\#{3}(?!\#) '), re.compile('\n'), 1],
-                ['heading4', re.compile('\#{4}(?!\#) '), re.compile('\n'), 1],
-                ['heading5', re.compile('\#{5}(?!\#) '), re.compile('\n'), 1],
-                ['heading6', re.compile('\#{6} '), re.compile('\n'), 1],
-                ['table_default', re.compile('\* '), re.compile('\n'), 1],
-                ['table_sorted', re.compile('\d+\. '), re.compile('\n'), 1],
-                ['italic', re.compile('(?<!\*)(\*\w)'),
-                  re.compile('(\w\*)(?!\*)'), 1],
-                ['bold', re.compile('\*\*\w'), re.compile('\w\*\*'), 2],
-                ['bolditalic', re.compile('\*\*\*\w'),
-                   re.compile('\w\*\*\*'), 3]]
+    patterns = [['heading1', re.compile(r'^\#(?!\#) ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['heading1', re.compile(r'^(.+)\n(=+)', re.MULTILINE),
+                    re.compile(r'(=+)'), 1],
+                ['heading2', re.compile(r'^\#{2}(?!\#) ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['heading2', re.compile(r'^(.+)\n(-+)', re.MULTILINE),
+                    re.compile(r'(-+)'), 1],
+                ['heading3', re.compile(r'^\#{3}(?!\#) ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['heading4', re.compile(r'^\#{4}(?!\#) ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['heading5', re.compile(r'^\#{5}(?!\#) ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['heading6', re.compile(r'^\#{6} ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+
+                ['table_default', re.compile(r'^\* ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['table_default', re.compile(r'^\+ ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['table_default', re.compile(r'^\- ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+                ['table_sorted', re.compile(r'^\d+\. ', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+
+                ['blockquote', re.compile(r'^>', re.MULTILINE),
+                    re.compile(r'\n'), 1],
+
+                ['underlined', re.compile(r'_\w'), re.compile(r'\w_'), 1],
+                ['italic', re.compile(r'(?<!\*)(\*\w)'),
+                  re.compile(r'(\w\*)(?!\*)'), 1],
+                ['bold', re.compile(r'\*\*\w'), re.compile(r'\w\*\*'), 2],
+                ['bolditalic', re.compile(r'\*\*\*\w'),
+                   re.compile(r'\w\*\*\*'), 3]]
 
     def __init__(self):
         gtk.TextBuffer.__init__(self)
@@ -133,6 +155,11 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.tag_table_sorted = self.create_tag("table_sorted",
             left_margin=110)
 
+        self.tag_blockquote = self.create_tag('blockquote', left_margin=110,
+            style=pango.STYLE_ITALIC)
+
+        self.tag_underlined = self.create_tag("underlined",
+            underline=pango.UNDERLINE_SINGLE)
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
         self.tag_italic = self.create_tag("italic", style=pango.STYLE_ITALIC)
         self.tag_bolditalic = self.create_tag("bolditalic",
@@ -147,13 +174,10 @@ class ScribberTextBuffer(gtk.TextBuffer):
             return True
 
     def _on_insert_text(self, buf, iter, text, length):
-
         # Continue a table if we got one
         if iter.has_tag(self.tag_table_default) and text == '\n':
             start = iter.copy()
             start.backward_line()
-
-            print start.get_text(iter)
 
             if start.get_text(iter) == '* \n':
                 self.delete(start, iter)
