@@ -40,7 +40,7 @@ class ScribberTextView(gtk.TextView):
         self.modify_font(font)
 
         # Wrap mode
-        self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
+        self.set_wrap_mode(gtk.WRAP_WORD)
 
         # Paragraph spacing
         self.set_pixels_above_lines(3)
@@ -408,7 +408,7 @@ class ScribberFindBox(gtk.HBox):
         """ Called when text in txt_find changes """
         self.hilight_search(widget.get_text())
 
-    def _on_key_press(self, widget, event):
+    def _on_key_press(self, widget, event, data=None):
         if widget == self.txt_find:
             if gtk.gdk.keyval_name(event.keyval) == 'Return':
                 # <Return> in txt_find
@@ -537,34 +537,34 @@ class ScribberFadeHBox(gtk.Fixed):
         self.add(self.main)
        
     def on_size_allocate(self, widget, event, data=None):
-        print 'asd'
         fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
+
         header_x, header_y, header_width, header_height = \
             self.header.get_allocation()
-        view_x, view_y, view_width, view_height = self.main.get_allocation()
+
         footer_x, footer_y, footer_width, footer_height = \
             self.footer.get_allocation()
-
-        if self.header.get_visible():
-            self.header.size_allocate((0, 0 - self.header_offset, fixed_width,
-                header_height))
 
         self.main.size_allocate((0, header_height - self.header_offset,
             fixed_width, fixed_height - header_height - footer_height +
             self.header_offset + self.footer_offset))
+
+        if self.header.get_visible():
+            self.header.size_allocate((0, 0 - self.header_offset, fixed_width,
+                header_height))
 
         if self.footer.get_visible():
             self.footer.size_allocate((0, fixed_height - footer_height +
                 self.footer_offset, fixed_width, footer_height))
 
     def fadeout(self):
-        if self.header.get_visible():
-            # Make sure we only call this once
+        # Make sure we only call this once
+        if self.header.get_visible() and not self.fading_in:
             gobject.timeout_add(5, self._fadeout)
 
     def fadein(self):
-        if not self.header.get_visible():
-            # Make sure we only call this once
+        # Make sure we only call this once
+        if not self.header.get_visible() and not self.fading_out:
             self.header.show()
             self.footer.show()
             gobject.timeout_add(5, self._fadein)
@@ -572,9 +572,6 @@ class ScribberFadeHBox(gtk.Fixed):
     def _fadeout(self):
         mod_mb = False
         mod_sb = False
-
-        # When we already are fading in at this moment, cancel
-        if self.fading_in: return False
 
         self.fading_out = True
 
@@ -603,9 +600,6 @@ class ScribberFadeHBox(gtk.Fixed):
     def _fadein(self):
         mod_mb = False
         mod_sb = False
-
-        # When we already are fading out at this moment, cancel
-        if self.fading_out: return False
 
         self.fading_in = True
 

@@ -60,15 +60,12 @@ class ScribberView():
             self._on_buffer_modified_change)
 
         # To hide or show the bars
-        #self.view.connect('key-press-event', self._on_buffer_changed)
         self.view.get_buffer().connect("insert-text", self._on_buffer_changed)
         self.view.get_buffer().connect("delete-range", self._on_buffer_changed)
 
         scrolled_window = gtk.ScrolledWindow()
         #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.add(self.view)
-
-        #scrolled_window.set_resize_mode(gtk.RESIZE_PARENT)
 
         self.find_box = ScribberFindBox(self.view.get_buffer())
 
@@ -80,6 +77,8 @@ class ScribberView():
         self.fix_find_replace.add(self.find_replace_box)
 
         vbox = gtk.VBox(False, 2)
+        # Chill.. otherwise, fade_box calls on_size_allocate infinitly
+        vbox.set_resize_mode(gtk.RESIZE_QUEUE)
 
         self.menu_bar = self.create_menu_bar()
         self.status_bar = self.create_status_bar()
@@ -92,8 +91,6 @@ class ScribberView():
         self.fade_box.add_main(vbox)
         self.fade_box.add_header(self.menu_bar)
         self.fade_box.add_footer(self.status_bar)
-
-        #self.fade_box.set_resize_mode(gtk.RESIZE_QUEUE)
 
         self.win.add(self.fade_box)
 
