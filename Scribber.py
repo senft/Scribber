@@ -3,9 +3,10 @@
 
 """
 Scribber, a simple text editor that focuses on minimalism. It has basic
-text editor features, Markdown-Syntax-Hilighting, Export to PDF/ODT. 
+text editor features, Markdown-Syntax-Hilighting, Export to PDF/ODT.
 
-Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
+Some icons provided by the Tango Desktop Project
+(http://tango.freedesktop.org/)
 """
 
 import pygtk
@@ -15,7 +16,8 @@ import os
 import sys
 
 from ReSTExporter import ReSTExporter
-from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox, ScribberFadeHBox
+from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox,\
+ScribberFadeHBox
 
 
 __author__ = 'Julian Wulfheide'
@@ -31,12 +33,12 @@ __status__ = 'Development'
 class ScribberView():
     def __init__(self, filename=None):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.win.set_size_request(500, 500)
 
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
 
         self.view = ScribberTextView()
+        self.view.set_size_request(500, 500)
 
         # GTK doesnt provide a way to check wether a window is fullscreen or
         # no. So we have to keep track ourselves.
@@ -248,8 +250,8 @@ class ScribberView():
 
     def show_about(self):
         dialog = gtk.AboutDialog()
-        dialog.set_name( 'Scribber')
-        dialog.set_version( __version__)
+        dialog.set_name('Scribber')
+        dialog.set_version(__version__)
         dialog.set_copyright(__copyright__)
         dialog.set_license(__license__)
         dialog.set_comments("Scribber is a simple text editor.")
@@ -439,7 +441,7 @@ class ScribberView():
     def _on_mouse_motion(self, widget, event, data=None):
         self.win.set_decorated(True)
         self.fade_box.fadein()
-    
+
     def _on_buffer_changed(self, buf, iter, text, length=None):
         self.win.set_decorated(False)
         self.fade_box.fadeout()
@@ -478,9 +480,10 @@ class ScribberView():
             self.is_fullscreen = True
 
     def _on_window_state_event(self, widget, event, data=None):
-        """ Called when the window state changes (e.g. Fullscreen/Unfullscreen).
-            Needed to determine the correct state for the fullscreen button,
-            because fullscreen can be set externally."""
+        """ Called when the window state changes (e.g.
+            Fullscreen/Unfullscreen). Needed to determine the correct state
+            for the fullscreen button, because fullscreen can be set
+            externally."""
         if event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
             self.button_fullscreen.set_active(True)
             self.is_fullscreen = True

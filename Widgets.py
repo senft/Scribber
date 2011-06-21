@@ -3,14 +3,14 @@
 
 """
 All custom widgets used in Scribber.
-    * ScribberTextView is a gtk.TextView with some basic formatting and 
-      mechanisms to focus the current sentence
-    * ScribberTextBuffer is the underlying gtk.TextBuffer. It has automatic
-      Markdown-Syntax-Hilighting and features simple hilighting for find and 
-      replace
-    * ScribberFindBox is a simple gtk.HBox containing the usual widgets
-      used in a Find-Windget
-    * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
+* ScribberTextView is a gtk.TextView with some basic formatting and
+mechanisms to focus the current sentence
+* ScribberTextBuffer is the underlying gtk.TextBuffer. It has automatic
+Markdown-Syntax-Hilighting and features simple hilighting for find and
+replace
+* ScribberFindBox is a simple gtk.HBox containing the usual widgets
+used in a Find-Windget
+* ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
 """
 
 import pygtk
@@ -147,14 +147,21 @@ class ScribberTextBuffer(gtk.TextBuffer):
             return True
 
     def _on_insert_text(self, buf, iter, text, length):
-        if iter.has_tag(self.tag_table_default) and text == "\n":
-            # If line is not empty
-            self.insert_at_cursor("* ")
-            # else
-            #   clear line
-        elif iter.has_tag(self.tag_table_sorted) and text == "\n":
+
+        # Continue a table if we got one
+        if iter.has_tag(self.tag_table_default) and text == '\n':
+            start = iter.copy()
+            start.backward_line()
+
+            print start.get_text(iter)
+
+            if start.get_text(iter) == '* \n':
+                self.delete(start, iter)
+            else:
+                self.insert_at_cursor('* ')
+        elif iter.has_tag(self.tag_table_sorted) and text == '\n':
             # Same
-            self.insert_at_cursor("\d ")
+            self.insert_at_cursor('\d ')
 
         self._apply_tags = True
         self._update_markdown(self.get_start_iter())
@@ -415,7 +422,8 @@ class ScribberFindBox(gtk.HBox):
                 self.next()
 
     def _on_toggle_match_case(self, widget):
-        # Search again in match_case changed
+        # Search again if match_case changed, because results can be very
+        # different
         self.hilight_search(self.txt_find.get_text())
 
     def next(self, data=None):
@@ -514,7 +522,7 @@ class ScribberFadeHBox(gtk.Fixed):
     def __init__(self):
         gtk.Fixed.__init__(self)
         self.connect('size-allocate', self.on_size_allocate)
-        self.header_offset = 0 
+        self.header_offset = 0
         self.footer_offset = 0
 
         self.main = None
@@ -527,7 +535,7 @@ class ScribberFadeHBox(gtk.Fixed):
     def add_header(self, widget):
         self.header = widget
         self.add(self.header)
-        
+
     def add_footer(self, widget):
         self.footer = widget
         self.add(self.footer)
@@ -535,7 +543,7 @@ class ScribberFadeHBox(gtk.Fixed):
     def add_main(self, widget):
         self.main = widget
         self.add(self.main)
-       
+
     def on_size_allocate(self, widget, event, data=None):
         fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
 
