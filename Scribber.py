@@ -96,18 +96,21 @@ class ScribberView():
 
         self.win.add(self.fade_box)
 
-        # Go!
-        self.win.show_all()
-        self.fix_find.hide()
-        self.fix_find_replace.hide()
 
         if self.filename:
             self.open(filename)
 
+    def go(self):
+        """ Show Scribber instance. """
+        # Go!
+        self.win.show_all()
+        self.fix_find.hide()
+        self.fix_find_replace.hide()
         gtk.main()
 
     def new(self):
-        ScribberView()
+        new = ScribberView()
+        new.go()
 
     def save(self):
         if not self.filename:
@@ -262,8 +265,10 @@ class ScribberView():
         dialog.run()
 
     def show_help(self):
-        print 'asd'
-        ScribberView('help.txt')
+        """ Start a not-editable Scribber instance showing a help document. """
+        help = ScribberView('help.txt')
+        help.view.set_editable(False)
+        help.go()
 
     def show_ask_save_dialog(self):
         """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to
@@ -515,6 +520,8 @@ class ScribberView():
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        ScribberView(sys.argv[1])
+        scribber = ScribberView(sys.argv[1])
     else:
-        ScribberView()
+        scribber = ScribberView()
+
+    scribber.go()

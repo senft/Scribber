@@ -11,13 +11,15 @@ Markdown Highlighting
 Scribber uses a slightly modified version of Markdown. Since Markdown is targeted on creating HTML-Code for Content-Managment-Systems it's not what we want in Scribber. For example we don't need hyperlinks or horizontal lines, but on the other hand we *do* need footnotes and tables. So what do we have in Scribber?
 
 ### Basic decoration
-	*italic*, **bold**, _underline_, ***bolditalic***
+*italic*, **bold**, _underline_, ***bolditalic***
 
 ### Lists
+##### Unsorted lists
 * This list is unsorted
 * This is the second item. Lists can automatically be wrapped. Scribber doesn't care if the line is too long. No need for you to wrap the lines by yourself. But if you want to you can and indent the next line.
 * This is a nice list.
 
+#### Sorted lists
 1. This list is sorted.
 5. The numbers in front actually dont matter.
 2. This is a nice list.
