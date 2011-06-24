@@ -28,6 +28,8 @@ class ScribberTextView(gtk.TextView):
 
         self.focus = True
 
+        self.set_size_request(500, 500)
+
         self.set_buffer(ScribberTextBuffer())
 
         self.connect_after('key-press-event', self._on_key_event)
@@ -40,7 +42,7 @@ class ScribberTextView(gtk.TextView):
         self.modify_font(font)
 
         # Wrap mode
-        self.set_wrap_mode(gtk.WRAP_WORD)
+        self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
 
         # Paragraph spacing
         self.set_pixels_above_lines(3)
@@ -442,7 +444,7 @@ class ScribberFindBox(gtk.HBox):
     def _on_key_press(self, widget, event, data=None):
         if widget == self.txt_find:
             if gtk.gdk.keyval_name(event.keyval) == 'Return':
-                # <Return> in txt_find
+                # Pressed <Return> in txt_find
                 self.next()
 
     def _on_toggle_match_case(self, widget):
@@ -525,10 +527,10 @@ class ScribberFindReplaceBox(ScribberFindBox):
     def _on_key_press(self, widget, event, data=None):
         if gtk.gdk.keyval_name(event.keyval) == 'Return':
             if widget == self.txt_find:
-                # <Return> in txt_find
+                # Pressed <Return> in txt_find
                 self.next()
             elif widget == self.txt_replace:
-                # <Return> in txt_replace
+                # Pressed <Return> in txt_replace
                 self.replace()
 
     def _on_replace_click(self, widget, data=None):
@@ -543,6 +545,11 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
 
 class ScribberFadeHBox(gtk.Fixed):
+    """ This is a VBox (based on a gtk.Fixed) that holds 3 children. A header,
+        a main widget and a footer. The main widget consumes all space not
+        needed by the header/footer. Also it is possible to fadeout the
+        header/footer with a nice animation. """
+
     def __init__(self):
         gtk.Fixed.__init__(self)
         self.connect('size-allocate', self.on_size_allocate)

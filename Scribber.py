@@ -38,7 +38,6 @@ class ScribberView():
         gtk.rc_parse(".gtkrc")
 
         self.view = ScribberTextView()
-        self.view.set_size_request(500, 500)
 
         # GTK doesnt provide a way to check wether a window is fullscreen or
         # no. So we have to keep track ourselves.
@@ -67,6 +66,7 @@ class ScribberView():
 
         scrolled_window = gtk.ScrolledWindow()
         #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
         scrolled_window.add(self.view)
 
         self.find_box = ScribberFindBox(self.view.get_buffer())
@@ -95,7 +95,6 @@ class ScribberView():
         self.fade_box.add_footer(self.status_bar)
 
         self.win.add(self.fade_box)
-
 
         if self.filename:
             self.open(filename)
@@ -233,6 +232,7 @@ class ScribberView():
     def toggle_find_box(self):
         self.fix_find_replace.hide()
 
+        print 'toggle'
         if self.fix_find.get_visible():
             self.fix_find.hide()
             self.view.get_buffer().stop_hilight_pattern()
@@ -240,6 +240,7 @@ class ScribberView():
         else:
             self.fix_find.show()
             self.win.set_focus(self.find_box.txt_find)
+            print 'show'
 
     def toggle_find_replace_box(self):
         self.fix_find.hide()
