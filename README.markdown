@@ -20,4 +20,5 @@
 
 
 Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
+
 Scribber uses a modified version of markdown2latex by Rufus Pollock (http://rufuspollock.org/2008/06/23/markdown2latex/)
