@@ -15,7 +15,7 @@ import gtk
 import os
 import sys
 
-from ReSTExporter import ReSTExporter
+from MarkdownExporter import MarkdownExporter, ExportDialog
 from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox,\
 ScribberFadeHBox
 
@@ -44,7 +44,7 @@ class ScribberView():
         self.is_fullscreen = False
 
         self.filename = filename
-        self.exporter = ReSTExporter(self.view.get_buffer())
+        self.exporter = MarkdownExporter()
 
         self.win.set_title("Scribber - Untitled")
         self.win.set_destroy_with_parent(False)
@@ -118,7 +118,12 @@ class ScribberView():
                 self.view.get_buffer().set_modified(False)
         else:
             # Filename is know
-            if self.exporter.to_plain_text(self.filename):
+            result = self.exporter.to_plain_text(
+                self.view.get_buffer().get_start_iter().get_text(
+                self.view.get_buffer().get_end_iter()),
+                self.filename)
+
+            if result:
                 self.view.get_buffer().set_modified(False)
 
         # If we saved in one of the branches above, get_modified should be
@@ -143,37 +148,43 @@ class ScribberView():
         return success
 
     def export(self):
-        dialog = gtk.FileChooserDialog(parent=self.win, title='Export...',
+        #exportdialog = ExportDialog()
+        #exportdialog.show()
+        
+        filedialog = gtk.FileChooserDialog(parent=self.win, title='Export...',
             action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
             gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
         filter_pdf = gtk.FileFilter()
         filter_pdf.set_name('PDF-Document')
         filter_pdf.add_pattern('*.pdf')
-        dialog.add_filter(filter_pdf)
+        filedialog.add_filter(filter_pdf)
 
         filter_odt = gtk.FileFilter()
         filter_odt.set_name('Open-Office-Document')
         filter_odt.add_pattern('*.odt')
-        dialog.add_filter(filter_odt)
+        filedialog.add_filter(filter_odt)
 
-        response = dialog.run()
+        response = filedialog.run()
 
         if response == gtk.RESPONSE_OK:
-            filename = dialog.get_filename()
+            filename = filedialog.get_filename()
             print 'Export to: ', filename
 
             file, ext = os.path.splitext(filename)
 
-            if dialog.get_filter().get_name() == 'PDF-Document':
-                self.exporter.to_pdf(file)
-            elif dialog.get_filter().get_name() == 'Open-Office-Document':
+            if filedialog.get_filter().get_name() == 'PDF-Document':
+                # TODO Ugly text retreavel
+                self.exporter.to_pdf(self.view.get_buffer().get_start_iter().get_text(
+                self.view.get_buffer().get_end_iter()),
+                file)
+            elif filedialog.get_filter().get_name() == 'Open-Office-Document':
                 self.exporter.to_odt(file)
 
         elif response == gtk.RESPONSE_CANCEL:
             print 'Closed, no file selected'
 
-        dialog.destroy()
+        filedialog.destroy()
 
     def open(self, filename=None):
         response = None

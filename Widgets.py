@@ -38,7 +38,7 @@ class ScribberTextView(gtk.TextView):
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
 
-        font = pango.FontDescription("Bitstream 12")
+        font = pango.FontDescription("Deja Vu Sans Mono  11")
         self.modify_font(font)
 
         # Wrap mode
@@ -94,12 +94,12 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
     patterns = [['heading1', re.compile(r'^\#(?!\#) ', re.MULTILINE),
                     re.compile(r'\n'), 1],
-                ['heading1', re.compile(r'^(.+)\n(=+)', re.MULTILINE),
-                    re.compile(r'(=+)'), 1],
+                ['heading1', re.compile(r'^(.+)\n(=+)$', re.MULTILINE),
+                    re.compile(r'=+'), 1],
                 ['heading2', re.compile(r'^\#{2}(?!\#) ', re.MULTILINE),
                     re.compile(r'\n'), 1],
-                ['heading2', re.compile(r'^(.+)\n(-+)', re.MULTILINE),
-                    re.compile(r'(-+)'), 1],
+                ['heading2', re.compile(r'^(.+)\n(-+)$', re.MULTILINE),
+                    re.compile(r'-+'), 1],
                 ['heading3', re.compile(r'^\#{3}(?!\#) ', re.MULTILINE),
                     re.compile(r'\n'), 1],
                 ['heading4', re.compile(r'^\#{4}(?!\#) ', re.MULTILINE),
@@ -115,6 +115,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     re.compile(r'\n'), 1],
                 ['table_default', re.compile(r'^\- ', re.MULTILINE),
                     re.compile(r'\n'), 1],
+
                 ['table_sorted', re.compile(r'^\d+\. ', re.MULTILINE),
                     re.compile(r'\n'), 1],
 
