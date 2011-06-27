@@ -93,8 +93,6 @@ class NoPatternFound(Exception):
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
-
-
     patterns = [['heading1', re.compile(r'^\#(?!\#) ', re.MULTILINE),
                     re.compile(r'\n'), 1],
                 ['heading1', re.compile(r'^(.+)\n(=+)$', re.MULTILINE),
@@ -307,7 +305,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         while not finished:
             try:
-                tagn, mstart, mend, length = self._get_first_pattern(start, end)
+                tagn, mstart, mend, length = \
+                    self._get_first_pattern(start, end)
 
                 if mstart.get_offset() + length in used_iters or \
                     (mend.get_offset() in used_iters and not mend.equal(end)):
@@ -604,7 +603,7 @@ class ScribberFadeHBox(gtk.Fixed):
 
     def on_size_allocate(self, widget, event, data=None):
         self._resize_children()
-        
+
     def fadeout(self):
         # Make sure we only call this once
         if self.header.get_visible() and not self.fading_in:
@@ -612,7 +611,7 @@ class ScribberFadeHBox(gtk.Fixed):
 
     def fadein(self):
         # Make sure we only call this once
-        if (not self.header.get_visible() and not self.fading_out and not 
+        if (not self.header.get_visible() and not self.fading_out and not
             self.fading_in):
 
             self.header.show()

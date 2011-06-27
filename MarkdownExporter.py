@@ -6,6 +6,7 @@ import mdx_latex
 import subprocess
 import gtk
 
+
 class ExportDialog(gtk.Dialog):
     def __init__(self):
         gtk.Dialog.__init__(self)

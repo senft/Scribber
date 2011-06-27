@@ -153,7 +153,7 @@ class ScribberView():
     def export(self):
         #exportdialog = ExportDialog()
         #exportdialog.show()
-        
+
         filedialog = gtk.FileChooserDialog(parent=self.win, title='Export...',
             action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
             gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
@@ -180,7 +180,7 @@ class ScribberView():
                 # TODO Ugly text retreavel
                 self.exporter.to_pdf(
                     self.view.get_buffer().get_start_iter().get_text(
-                    self.view.get_buffer().get_end_iter()),file)
+                    self.view.get_buffer().get_end_iter()), file)
             elif filedialog.get_filter().get_name() == 'Open-Office-Document':
                 self.exporter.to_odt(file)
 
