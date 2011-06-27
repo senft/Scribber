@@ -28,8 +28,6 @@ class ScribberTextView(gtk.TextView):
 
         self.focus = True
 
-        self.set_size_request(500, 500)
-
         self.set_buffer(ScribberTextBuffer())
 
         self.connect_after('key-press-event', self._on_key_event)
@@ -90,7 +88,12 @@ class ScribberTextView(gtk.TextView):
         self.focus_current_sentence()
 
 
+class NoPatternFound(Exception):
+    pass
+
+
 class ScribberTextBuffer(gtk.TextBuffer):
+
 
     patterns = [['heading1', re.compile(r'^\#(?!\#) ', re.MULTILINE),
                     re.compile(r'\n'), 1],
@@ -303,10 +306,9 @@ class ScribberTextBuffer(gtk.TextBuffer):
             self.remove_tag_by_name(p[0], start, end)
 
         while not finished:
-            tagn, mstart, mend, length = self._get_first_pattern(start, end)
+            try:
+                tagn, mstart, mend, length = self._get_first_pattern(start, end)
 
-            if tagn:
-                # Found a pattern
                 if mstart.get_offset() + length in used_iters or \
                     (mend.get_offset() in used_iters and not mend.equal(end)):
                     start = mstart
@@ -323,7 +325,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
                 if start == end:
                     finished = True
-            else:
+            except NoPatternFound:
                 # No pattern found
                 finished = True
 
@@ -335,20 +337,16 @@ class ScribberTextBuffer(gtk.TextBuffer):
         for pattern in self.patterns:
             mstart = start.copy()
 
-            pattern_tagn, pattern_start, pattern_end, pattern_length = pattern
+            pat_tagn, pat_start, pat_end, pat_length = pattern
 
             # Match begining
-            result_start = pattern_start.search(mstart.get_text(end))
+            result_start = pat_start.search(mstart.get_text(end))
             if result_start:
-                # TODO: Maybe: Shortcut here, if we found a match at
-                # mstart.get_offset() == 0, because no match will be before
-                # that one
-
                 # Forward until start of match
                 mstart.forward_chars(result_start.start())
 
                 # Match end
-                result_end = pattern_end.search(mstart.get_text(end))
+                result_end = pat_end.search(mstart.get_text(end))
                 if result_end:
                     mend = mstart.copy()
                     mend.forward_chars(result_end.end())
@@ -356,11 +354,18 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     # No pattern for end found -> match until end
                     mend = self.get_end_iter()
 
-                matches.append([result_start.start(), [pattern_tagn, mstart,
+                if mstart.equal(start):
+                    # Our first match is at the start of the range we are
+                    # looking at -> We wont find a match before this ->
+                    # Return this match
+                    return [pat_tagn, mstart, mend, pat_length]
+
+                matches.append([result_start.start(), [pat_tagn, mstart,
                     mend, pattern[3]]])
 
         if len(matches) == 0:
-            return (None, None, None, None)
+            raise NoPatternFound('Found no matchting pattern in buffer')
+
         return min(matches)[1]
 
     def focus_current_sentence(self):
@@ -576,7 +581,7 @@ class ScribberFadeHBox(gtk.Fixed):
         self.main = widget
         self.add(self.main)
 
-    def on_size_allocate(self, widget, event, data=None):
+    def _resize_children(self):
         fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
 
         header_x, header_y, header_width, header_height = \
@@ -597,6 +602,9 @@ class ScribberFadeHBox(gtk.Fixed):
             self.footer.size_allocate((0, fixed_height - footer_height +
                 self.footer_offset, fixed_width, footer_height))
 
+    def on_size_allocate(self, widget, event, data=None):
+        self._resize_children()
+        
     def fadeout(self):
         # Make sure we only call this once
         if self.header.get_visible() and not self.fading_in:
@@ -604,14 +612,16 @@ class ScribberFadeHBox(gtk.Fixed):
 
     def fadein(self):
         # Make sure we only call this once
-        if not self.header.get_visible() and not self.fading_out:
+        if (not self.header.get_visible() and not self.fading_out and not 
+            self.fading_in):
+
             self.header.show()
             self.footer.show()
             gobject.timeout_add(5, self._fadein)
 
     def _fadeout(self):
-        mod_mb = False
-        mod_sb = False
+        mod_head = False
+        mod_foot = False
 
         self.fading_out = True
 
@@ -621,25 +631,26 @@ class ScribberFadeHBox(gtk.Fixed):
             self.footer.get_allocation()
         if header_height > self.header_offset:
             self.header_offset += 1
-            mod_mb = True
+            mod_head = True
 
         if footer_height > self.footer_offset:
             self.footer_offset += 1
-            mod_sb = True
+            mod_foot = True
 
-        self.on_size_allocate(None, None, None)
+        self._resize_children()
 
-        if not mod_sb and not mod_mb:
+        if not mod_head and not mod_foot:
             # We havent moved header nor footer -> fading finished
             self.fading_out = False
             self.header.hide()
             self.footer.hide()
 
-        return mod_mb or mod_sb
+        # Return False when neither header nor footer has been modified
+        return mod_head or mod_foot
 
     def _fadein(self):
-        mod_mb = False
-        mod_sb = False
+        mod_head = False
+        mod_foot = False
 
         self.fading_in = True
 
@@ -650,16 +661,16 @@ class ScribberFadeHBox(gtk.Fixed):
 
         if self.header_offset > 0:
             self.header_offset -= 1
-            mod_mb = True
+            mod_head = True
 
         if self.footer_offset > 0:
             self.footer_offset -= 1
-            mod_sb = True
+            mod_foot = True
 
-        self.on_size_allocate(None, None, None)
+        self._resize_children()
 
-        if not mod_sb and not mod_mb:
+        if not mod_head and not mod_foot:
             # We havent moved header nor footer -> fading finished
             self.fading_in = False
 
-        return mod_mb or mod_sb
+        return mod_head or mod_foot

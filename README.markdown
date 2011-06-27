@@ -19,5 +19,5 @@
 * Export to ODT
 
 
-Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
+Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)</br />
 Scribber uses a modified version of markdown2latex by Rufus Pollock (http://rufuspollock.org/2008/06/23/markdown2latex/)

@@ -15,9 +15,12 @@ import gtk
 import os
 import sys
 
-from MarkdownExporter import MarkdownExporter, ExportDialog
-from Widgets import ScribberTextView, ScribberFindBox, ScribberFindReplaceBox,\
-ScribberFadeHBox
+from MarkdownExporter import MarkdownExporter
+from MarkdownExporter import ExportDialog
+from Widgets import ScribberTextView
+from Widgets import ScribberFindBox
+from Widgets import ScribberFindReplaceBox
+from Widgets import ScribberFadeHBox
 
 
 __author__ = 'Julian Wulfheide'
@@ -175,9 +178,9 @@ class ScribberView():
 
             if filedialog.get_filter().get_name() == 'PDF-Document':
                 # TODO Ugly text retreavel
-                self.exporter.to_pdf(self.view.get_buffer().get_start_iter().get_text(
-                self.view.get_buffer().get_end_iter()),
-                file)
+                self.exporter.to_pdf(
+                    self.view.get_buffer().get_start_iter().get_text(
+                    self.view.get_buffer().get_end_iter()),file)
             elif filedialog.get_filter().get_name() == 'Open-Office-Document':
                 self.exporter.to_odt(file)
 
