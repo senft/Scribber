@@ -1,4 +1,4 @@
-Scribber is a simple text editor that focuses on minimalism.
+**Scribber** is a simple text editor that focuses on minimalism.
 
 # Some features:
 
@@ -10,14 +10,13 @@ Scribber is a simple text editor that focuses on minimalism.
 # Dependencies:
 
 * GTK+
-* Docutils
 * pdflatex
 
 # TODO:
 
-* Decide wether i want to implement spellcheck or not
-* Polish GUI (fadeout bars when typing, etc..)
-* Optimize syntax hilighting
+* Optimize syntax hilighting (gets very slow on large texts)
+* Add some Markdown features
+* Export to ODT
 
 
 Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
