@@ -305,11 +305,13 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         while not finished:
             try:
-                tagn, mstart, mend, length = \
-                    self._get_first_pattern(start, end)
+                tagn, mstart, mend, length = self._get_first_pattern(start,
+                    end)
 
-                if mstart.get_offset() + length in used_iters or \
+                if (mstart.get_offset() + length) in used_iters or \
                     (mend.get_offset() in used_iters and not mend.equal(end)):
+                    # Iterators have been used -> skip match.
+                    # End-iterator can be used multiple times, though.
                     start = mstart
                     start.forward_chars(length)
                     continue

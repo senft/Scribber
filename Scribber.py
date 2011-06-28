@@ -34,7 +34,7 @@ __status__ = 'Development'
 
 
 class ScribberView():
-    def __init__(self, filename=None):
+    def __init__(self):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
 
         # Parse own .gtkrc for colored cursor
@@ -46,7 +46,7 @@ class ScribberView():
         # no. So we have to keep track ourselves.
         self.is_fullscreen = False
 
-        self.filename = filename
+        self.filename = None
         self.exporter = MarkdownExporter()
 
         self.win.set_title("Scribber - Untitled")
@@ -98,9 +98,6 @@ class ScribberView():
         self.fade_box.add_footer(self.status_bar)
 
         self.win.add(self.fade_box)
-
-        if self.filename:
-            self.open(filename)
 
     def go(self):
         """ Show Scribber instance. """
@@ -192,49 +189,54 @@ class ScribberView():
     def open(self, filename=None):
         response = None
         if self.view.get_buffer().get_modified():
+            # Ask if file should be saved if it has been modified
             response = self.show_ask_save_dialog()
 
-        if filename is None:
-            if not response == gtk.RESPONSE_CANCEL:
-
+        # If save-dialog has been canceled, cancel open, too
+        if not response == gtk.RESPONSE_CANCEL:
+            if filename is None:
+                # No filename passed, so show a open-dialog
                 dialog = gtk.FileChooserDialog(parent=self.win,
                         title='Open...', action=gtk.FILE_CHOOSER_ACTION_OPEN,
                         buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                         gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-
                 response = dialog.run()
-
                 if response == gtk.RESPONSE_OK:
+                    # A file has been selected
                     filename = dialog.get_filename()
-                    self.view.open_file(filename)
-                    self.win.set_title('Scribber - ' + filename)
-                    self.filename = filename
-                elif response == gtk.RESPONSE_CANCEL:
-                    print 'Closed, no file selected'
 
                 dialog.destroy()
-        else:
-            self.view.open_file(filename)
-            self.win.set_title('Scribber - ' + filename)
-            self.filename = filename
+
+            # Open-dialog might have been canceled, so check for
+            # filename != None again
+            if filename is not None:
+                # Finally open the file
+                self.view.open_file(filename)
+                self.win.set_title(''.join(['Scribber - ', filename]))
+                self.filename = filename
 
     def delete(self):
+        """ Deletes the currently selected text in out TextBuffer."""
         self.view.get_buffer().delete_selection(True, True)
 
     def copy(self):
+        """ Pushes the currently selected text into the clipboard."""
         try:
             clipboard = gtk.clipboard_get()
             (start, end) = self.view.get_buffer().get_selection_bounds()
             clipboard.set_text(start.get_text(end))
-        except:
+        except ValueError:
             # No selection
             pass
 
     def cut(self):
+        """ Pushes the currently selected text into the clipboard and deletes
+            it in our TextBuffer."""
         self.copy()
         self.view.get_buffer().delete_selection(True, True)
 
     def paste(self):
+        """ Pushes the clipboard in our TextBuffer."""
         # If text is selected delete it first
         self.delete()
 
@@ -246,7 +248,6 @@ class ScribberView():
     def toggle_find_box(self):
         self.fix_find_replace.hide()
 
-        print 'toggle'
         if self.fix_find.get_visible():
             self.fix_find.hide()
             self.view.get_buffer().stop_hilight_pattern()
@@ -254,7 +255,6 @@ class ScribberView():
         else:
             self.fix_find.show()
             self.win.set_focus(self.find_box.txt_find)
-            print 'show'
 
     def toggle_find_replace_box(self):
         self.fix_find.hide()
@@ -276,7 +276,6 @@ class ScribberView():
         dialog.set_comments("Scribber is a simple text editor.")
         dialog.set_website("website")
         dialog.connect("response", lambda d, r: d.destroy())
-
         dialog.run()
 
     def show_help(self):
@@ -535,7 +534,8 @@ class ScribberView():
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        scribber = ScribberView(sys.argv[1])
+        scribber = ScribberView()
+        scribber.open(sys.argv[1])
     else:
         scribber = ScribberView()
 
