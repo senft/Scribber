@@ -17,16 +17,16 @@ import sys
 
 from MarkdownExporter import MarkdownExporter
 from MarkdownExporter import ExportDialog
-from Widgets import ScribberTextView
-from Widgets import ScribberFindBox
-from Widgets import ScribberFindReplaceBox
-from Widgets import ScribberFadeHBox
+from ScribberWidgets import ScribberTextView
+from ScribberWidgets import ScribberFindBox
+from ScribberWidgets import ScribberFindReplaceBox
+from ScribberWidgets import ScribberFadeHBox
 
 
 __author__ = 'Julian Wulfheide'
 __copyright__ = 'Copyright 2011, Julian Wulfheide'
 __credits__ = ['Julian Wulfheide', ]
-__license__ = ''
+__license__ = 'MIT'
 __maintainer__ = 'Julian Wulfheide'
 __version__ = '0.1'
 __email__ = 'ju.wulfheide@gmail.com'

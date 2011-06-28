@@ -126,8 +126,8 @@ class LaTeXExtension(markdown.Extension):
                 self.md.inlinePatterns.pop(key)
                 break
 
-        #footnote_extension = FootnoteExtension()
-        #footnote_extension.extendMarkdown(md, md_globals)
+        footnote_extension = FootnoteExtension()
+        footnote_extension.extendMarkdown(md, md_globals)
 
         latex_tp = LaTeXTreeProcessor()
         math_pp = MathTextPostProcessor()

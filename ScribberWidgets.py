@@ -411,6 +411,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
 
 class ScribberFindBox(gtk.HBox):
+    # TODO: When this gets shown and has a text in txt_find -> hilight that
     def __init__(self, buffer):
         gtk.HBox.__init__(self, False, 4)
         self.matches = None
