@@ -18,9 +18,8 @@ class MarkdownExporter():
         pass
 
     def to_pdf(self, text, filename):
-        self.to_latex(text, filename)
-
-        subprocess.Popen(''.join['pdflatex ', filename, ' .tex'], shell=True)
+        if self.to_latex(text, filename):
+            subprocess.Popen(''.join(['pdflatex ', filename, ' .tex']), shell=True)
         return True
 
     def to_latex(self, text, filename):
@@ -44,12 +43,17 @@ class MarkdownExporter():
         out = ''.join(document)
         #print out
 
-        with open(''.join[filename, '.tex'], 'w+') as f:
-            f.write(out)
+        return self._write_to_file(text, ''.join([filename, '.tex']))
 
     def to_plain_text(self, text, filename):
-        with open(filename, 'w+') as f:
-            f.write(text)
+        return self._write_to_file(text, filename)
 
-        # TODO: Success?
-        return True
+    def _write_to_file(self, text, filename):
+        result = True
+        try:
+            with open(filename, 'w+') as f:
+                f.write(text)
+        except IOError:
+            result = False
+
+        return result

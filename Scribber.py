@@ -16,8 +16,9 @@ import os
 import sys
 
 from MarkdownExporter import MarkdownExporter
-from MarkdownExporter import ExportDialog
+#from MarkdownExporter import ExportDialog
 from ScribberWidgets import ScribberTextView
+from ScribberWidgets import ScribberTextBuffer
 from ScribberWidgets import ScribberFindBox
 from ScribberWidgets import ScribberFindReplaceBox
 from ScribberWidgets import ScribberFadeHBox
@@ -40,7 +41,9 @@ class ScribberView():
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
 
+        self.buffer = ScribberTextBuffer()
         self.view = ScribberTextView()
+        self.view.set_buffer(self.buffer)
 
         # GTK doesnt provide a way to check wether a window is fullscreen or
         # no. So we have to keep track ourselves.
@@ -60,24 +63,24 @@ class ScribberView():
         self.win.connect('motion-notify-event', self._on_mouse_motion)
 
         # To keep track of wether the document is modified or not.
-        self.view.get_buffer().connect('modified-changed',
+        self.buffer.connect('modified-changed',
             self._on_buffer_modified_change)
 
         # To hide or show the bars
-        self.view.get_buffer().connect("insert-text", self._on_buffer_changed)
-        self.view.get_buffer().connect("delete-range", self._on_buffer_changed)
+        self.buffer.connect("insert-text", self._on_buffer_changed)
+        self.buffer.connect("delete-range", self._on_buffer_changed)
 
         scrolled_window = gtk.ScrolledWindow()
         #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
         scrolled_window.add(self.view)
 
-        self.find_box = ScribberFindBox(self.view.get_buffer())
+        self.find_box = ScribberFindBox(self.buffer)
 
         self.fix_find = gtk.Fixed()
         self.fix_find.add(self.find_box)
 
-        self.find_replace_box = ScribberFindReplaceBox(self.view.get_buffer())
+        self.find_replace_box = ScribberFindReplaceBox(self.buffer)
         self.fix_find_replace = gtk.Fixed()
         self.fix_find_replace.add(self.find_replace_box)
 
@@ -115,20 +118,20 @@ class ScribberView():
         if not self.filename:
             # Never saved before (no filename known) -> show SaveAs dialog
             if self.save_as():
-                self.view.get_buffer().set_modified(False)
+                self.buffer.set_modified(False)
         else:
             # Filename is know
             result = self.exporter.to_plain_text(
-                self.view.get_buffer().get_start_iter().get_text(
-                self.view.get_buffer().get_end_iter()),
+                self.buffer.get_start_iter().get_text(
+                self.buffer.get_end_iter()),
                 self.filename)
 
             if result:
-                self.view.get_buffer().set_modified(False)
+                self.buffer.set_modified(False)
 
         # If we saved in one of the branches above, get_modified should be
         # to false now -> save() was successfull
-        return not self.view.get_buffer().get_modified()
+        return not self.buffer.get_modified()
 
     def save_as(self):
         success = False
@@ -169,26 +172,22 @@ class ScribberView():
 
         if response == gtk.RESPONSE_OK:
             filename = filedialog.get_filename()
-            print 'Export to: ', filename
+            print('Export to: ', filename)
 
             file, ext = os.path.splitext(filename)
 
             if filedialog.get_filter().get_name() == 'PDF-Document':
                 # TODO Ugly text retreavel
-                self.exporter.to_pdf(
-                    self.view.get_buffer().get_start_iter().get_text(
-                    self.view.get_buffer().get_end_iter()), file)
+                self.exporter.to_pdf(self.buffer.get_start_iter().get_text(
+                    self.buffer.get_end_iter()), file)
             elif filedialog.get_filter().get_name() == 'Open-Office-Document':
                 self.exporter.to_odt(file)
-
-        elif response == gtk.RESPONSE_CANCEL:
-            print 'Closed, no file selected'
 
         filedialog.destroy()
 
     def open(self, filename=None):
         response = None
-        if self.view.get_buffer().get_modified():
+        if self.buffer.get_modified():
             # Ask if file should be saved if it has been modified
             response = self.show_ask_save_dialog()
 
@@ -217,13 +216,13 @@ class ScribberView():
 
     def delete(self):
         """ Deletes the currently selected text in out TextBuffer."""
-        self.view.get_buffer().delete_selection(True, True)
+        self.buffer.delete_selection(True, True)
 
     def copy(self):
         """ Pushes the currently selected text into the clipboard."""
         try:
             clipboard = gtk.clipboard_get()
-            (start, end) = self.view.get_buffer().get_selection_bounds()
+            (start, end) = self.buffer.get_selection_bounds()
             clipboard.set_text(start.get_text(end))
         except ValueError:
             # No selection
@@ -233,7 +232,7 @@ class ScribberView():
         """ Pushes the currently selected text into the clipboard and deletes
             it in our TextBuffer."""
         self.copy()
-        self.view.get_buffer().delete_selection(True, True)
+        self.buffer.delete_selection(True, True)
 
     def paste(self):
         """ Pushes the clipboard in our TextBuffer."""
@@ -243,14 +242,14 @@ class ScribberView():
         clipboard = gtk.clipboard_get()
         text = clipboard.wait_for_text()
         if text:
-            self.view.get_buffer().insert_at_cursor(text)
+            self.buffer.insert_at_cursor(text)
 
     def toggle_find_box(self):
         self.fix_find_replace.hide()
 
         if self.fix_find.get_visible():
             self.fix_find.hide()
-            self.view.get_buffer().stop_hilight_pattern()
+            self.buffer.stop_hilight_pattern()
             self.win.set_focus(self.view)
         else:
             self.fix_find.show()
@@ -261,7 +260,7 @@ class ScribberView():
 
         if self.fix_find_replace.get_visible():
             self.fix_find_replace.hide()
-            self.view.get_buffer().stop_hilight_pattern()
+            self.buffer.stop_hilight_pattern()
             self.win.set_focus(self.view)
         else:
             self.fix_find_replace.show()
@@ -481,7 +480,7 @@ class ScribberView():
         else:
             filename = 'Untitled'
 
-        if self.view.get_buffer().get_modified():
+        if self.buffer.get_modified():
             if not self.win.get_title().endswith('*'):
                 self.win.set_title('Scribber - ' + filename + '*')
         else:
@@ -490,9 +489,9 @@ class ScribberView():
 
     def _on_focus_click(self, widget, data=None):
         if self.view.focus:
-            self.view.get_buffer().stop_focus()
+            self.buffer.stop_focus()
         else:
-            self.view.get_buffer().focus_current_sentence()
+            self.buffer.focus_current_sentence()
         self.view.focus = not self.view.focus
 
     def _on_fullscreen_click(self, widget, data=None):
@@ -523,7 +522,7 @@ class ScribberView():
     def _delete_event(self, widget, event, data=None):
         # When this returns True we dont quit
         response = None
-        if self.view.get_buffer().get_modified():
+        if self.buffer.get_modified():
             response = self.show_ask_save_dialog()
 
         return response == gtk.RESPONSE_CANCEL

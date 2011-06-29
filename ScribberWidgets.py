@@ -28,8 +28,6 @@ class ScribberTextView(gtk.TextView):
 
         self.focus = True
 
-        self.set_buffer(ScribberTextBuffer())
-
         self.connect_after('key-press-event', self._on_key_event)
         self.connect('key-release-event', self._on_key_event)
         self.connect_after('button-press-event', self._on_button_event)
@@ -52,33 +50,32 @@ class ScribberTextView(gtk.TextView):
         # Line spacing
         self.set_pixels_inside_wrap(7)
 
-        self.focus_current_sentence()
-
     def open_file(self, filename):
-        with open(filename, 'r') as f:
-            data = f.read()
+        result = True
+        try:
+            with open(filename, 'r') as f:
+                data = f.read()
 
-        self.get_buffer().set_text(data)
+            self.get_buffer().set_text(data)
 
-        self.get_buffer().emit('insert-text',
-            self.get_buffer().get_start_iter(), '', 0)
+            # TODO Maybe memorize cursor position from last time editing
+            # this file
+            self.get_buffer().place_cursor(self.get_buffer().get_start_iter())
+            self.focus_current_sentence()
+            self.get_buffer().set_modified(False)
+        except IOError:
+            result = False
 
-        self.get_buffer().place_cursor(self.get_buffer().get_start_iter())
-        self.focus_current_sentence()
-        self.get_buffer().set_modified(False)
-
-        # Success?
-        return True
+        return result
 
     def focus_current_sentence(self):
         if self.focus:
             self.get_buffer().focus_current_sentence()
+            # Scroll cursor to middle of TextView
             self.scroll_to_mark(self.get_buffer().get_insert(), 0.0, True,
                 0.0, 0.5)
 
-    def _on_move_cursor(self, widet, step_size, count, extend_selection,
-        data=None):
-
+    def _on_move_cursor(self, widet, step_size, count, xtnd_slctn, data=None):
         self.focus_current_sentence()
 
     def _on_key_event(self, widget, event, data=None):
@@ -93,42 +90,52 @@ class NoPatternFound(Exception):
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
-    patterns = [['heading1', re.compile(r'^\#(?!\#) ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
-                ['heading1', re.compile(r'^(.+)\n(=+)$', re.MULTILINE),
-                    re.compile(r'=+'), 1],
-                ['heading2', re.compile(r'^\#{2}(?!\#) ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
-                ['heading2', re.compile(r'^(.+)\n(-+)$', re.MULTILINE),
-                    re.compile(r'-+'), 1],
-                ['heading3', re.compile(r'^\#{3}(?!\#) ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
-                ['heading4', re.compile(r'^\#{4}(?!\#) ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
-                ['heading5', re.compile(r'^\#{5}(?!\#) ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
-                ['heading6', re.compile(r'^\#{6} ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
 
-                ['table_default', re.compile(r'^\* ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
-                ['table_default', re.compile(r'^\+ ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
-                ['table_default', re.compile(r'^\- ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
+    class Pattern:
+        def __init__(self, tagn, start, end, length):
+            self.tagn = tagn
+            self.start = start
+            self.end = end
+            self.length = length
 
-                ['table_sorted', re.compile(r'^\d+\. ', re.MULTILINE),
-                    re.compile(r'\n'), 1],
+    patterns = [Pattern('heading1', re.compile(r"^\#(?!\#) ", re.MULTILINE),
+                    re.compile(r"\n"), 1),
+                Pattern('heading1', re.compile(r"^(.+)\n(=+)$", re.MULTILINE),
+                    re.compile(r"=+"), 1),
+                Pattern('heading2', re.compile(r"^\#{2}(?!\#) ",
+                    re.MULTILINE), re.compile(r"\n"), 1),
+                Pattern('heading2', re.compile(r"^(.+)\n(-+)$", re.MULTILINE),
+                    re.compile(r"-+"), 1),
+                Pattern('heading3', re.compile(r"^\#{3}(?!\#) ",
+                    re.MULTILINE), re.compile(r"\n"), 1),
+                Pattern('heading4', re.compile(r"^\#{4}(?!\#) ",
+                    re.MULTILINE), re.compile(r"\n"), 1),
+                Pattern('heading5', re.compile(r"^\#{5}(?!\#) ",
+                    re.MULTILINE), re.compile(r"\n"), 1),
+                Pattern('heading6', re.compile(r"^\#{6} ",
+                    re.MULTILINE), re.compile(r"\n"), 1),
 
-                ['blockquote', re.compile(r'^>', re.MULTILINE),
-                    re.compile(r'\n'), 1],
+                Pattern('table_default', re.compile(r"^\* ", re.MULTILINE),
+                    re.compile(r"\n"), 1),
+                Pattern('table_default', re.compile(r"^\+ ", re.MULTILINE),
+                    re.compile(r"\n"), 1),
+                Pattern('table_default', re.compile(r"^\- ", re.MULTILINE),
+                    re.compile(r"\n"), 1),
 
-                ['underlined', re.compile(r'_\w'), re.compile(r'\w_'), 1],
-                ['italic', re.compile(r'(?<!\*)(\*\w)'),
-                  re.compile(r'(\w\*)(?!\*)'), 1],
-                ['bold', re.compile(r'\*\*\w'), re.compile(r'\w\*\*'), 2],
-                ['bolditalic', re.compile(r'\*\*\*\w'),
-                   re.compile(r'\w\*\*\*'), 3]]
+                Pattern('table_sorted', re.compile(r"^\d+\. ", re.MULTILINE),
+                    re.compile(r"\n"), 1),
+
+                Pattern('blockquote', re.compile(r"^>", re.MULTILINE),
+                    re.compile(r"\n"), 1),
+
+                Pattern('underlined', re.compile(r"_\w"), re.compile(r"\w_"),
+                    1),
+                Pattern('italic', re.compile(r"(?<!\*)(\*\w)"),
+                    re.compile(r"(\w\*)(?!\*)"), 1),
+                Pattern('bold', re.compile(r"\*\*\w"), re.compile(r"\w\*\*"),
+                    2),
+                Pattern('bolditalic', re.compile(r"\*\*\*\w"),
+                    re.compile(r"\w\*\*\*"), 3)]
 
     def __init__(self):
         gtk.TextBuffer.__init__(self)
@@ -301,7 +308,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         # Only remove markdown tags (no focus tags)
         for p in self.patterns:
-            self.remove_tag_by_name(p[0], start, end)
+            self.remove_tag_by_name(p.tagn, start, end)
 
         while not finished:
             try:
@@ -335,19 +342,17 @@ class ScribberTextBuffer(gtk.TextBuffer):
             known pattern in this buffer. """
         matches = []
 
-        for pattern in self.patterns:
+        for p in self.patterns:
             mstart = start.copy()
 
-            pat_tagn, pat_start, pat_end, pat_length = pattern
-
             # Match begining
-            result_start = pat_start.search(mstart.get_text(end))
+            result_start = p.start.search(mstart.get_text(end))
             if result_start:
                 # Forward until start of match
                 mstart.forward_chars(result_start.start())
 
                 # Match end
-                result_end = pat_end.search(mstart.get_text(end))
+                result_end = p.end.search(mstart.get_text(end))
                 if result_end:
                     mend = mstart.copy()
                     mend.forward_chars(result_end.end())
@@ -359,10 +364,10 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     # Our first match is at the start of the range we are
                     # looking at -> We wont find a match before this ->
                     # Return this match
-                    return [pat_tagn, mstart, mend, pat_length]
+                    return [p.tagn, mstart, mend, p.length]
 
-                matches.append([result_start.start(), [pat_tagn, mstart,
-                    mend, pattern[3]]])
+                matches.append([result_start.start(), [p.tagn, mstart,
+                    mend, p.length]])
 
         if len(matches) == 0:
             raise NoPatternFound('Found no matchting pattern in buffer')
@@ -617,8 +622,6 @@ class ScribberFadeHBox(gtk.Fixed):
         if (not self.header.get_visible() and not self.fading_out and not
             self.fading_in):
 
-            self.header.show()
-            self.footer.show()
             gobject.timeout_add(5, self._fadein)
 
     def _fadeout(self):
@@ -627,16 +630,14 @@ class ScribberFadeHBox(gtk.Fixed):
 
         self.fading_out = True
 
-        header_x, header_y, header_width, header_height = \
-            self.header.get_allocation()
-        footer_x, footer_y, footer_width, footer_height = \
-            self.footer.get_allocation()
-        if header_height > self.header_offset:
-            self.header_offset += 1
+        head_x, head_y, head_width, head_height = self.header.get_allocation()
+        foot_x, foot_y, foot_width, foot_height = self.footer.get_allocation()
+        if head_height > self.head_offset:
+            self.head_offset += 1
             mod_head = True
 
-        if footer_height > self.footer_offset:
-            self.footer_offset += 1
+        if foot_height > self.foot_offset:
+            self.foot_offset += 1
             mod_foot = True
 
         self._resize_children()
@@ -656,17 +657,18 @@ class ScribberFadeHBox(gtk.Fixed):
 
         self.fading_in = True
 
-        header_x, header_y, header_width, header_height = \
-            self.header.get_allocation()
-        footer_x, footer_y, footer_width, footer_height = \
-            self.footer.get_allocation()
+        if not self.head.get_visible(): self.head.show()
+        if not self.foot.get_visible(): self.foot.show()
 
-        if self.header_offset > 0:
-            self.header_offset -= 1
+        head_x, head_y, head_width, head_height = self.header.get_allocation()
+        foot_x, foot_y, foot_width, foot_height = self.footer.get_allocation()
+
+        if self.head_offset > 0:
+            self.head_offset -= 1
             mod_head = True
 
-        if self.footer_offset > 0:
-            self.footer_offset -= 1
+        if self.foot_offset > 0:
+            self.foot_offset -= 1
             mod_foot = True
 
         self._resize_children()

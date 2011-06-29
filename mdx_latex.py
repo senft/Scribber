@@ -126,8 +126,8 @@ class LaTeXExtension(markdown.Extension):
                 self.md.inlinePatterns.pop(key)
                 break
 
-        footnote_extension = FootnoteExtension()
-        footnote_extension.extendMarkdown(md, md_globals)
+        #footnote_extension = FootnoteExtension()
+        #footnote_extension.extendMarkdown(md, md_globals)
 
         latex_tp = LaTeXTreeProcessor()
         math_pp = MathTextPostProcessor()
@@ -500,7 +500,7 @@ class FootnoteExtension (markdown.Extension):
         md.preprocessors.add('footnotes', FootnotePreprocessor(self), '_begin')
 
         ## Insert an inline pattern before ImageReferencePattern
-        FOOTNOTE_RE = r'\[\^([^\]]*)\]'  # blah blah [^1] blah
+        FOOTNOTE_RE = r"\[\^([^\]]*)\]"  # blah blah [^1] blah
         #index = md.inlinePatterns.index(md_globals['IMAGE_REFERENCE_PATTERN'])
         #md.inlinePatterns.insert(index, FootnotePattern(FOOTNOTE_RE, self))
         md.inlinePatterns.add('footnotes', FootnotePattern(FOOTNOTE_RE, self),
