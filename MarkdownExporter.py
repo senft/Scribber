@@ -1,11 +1,10 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
+import gtk
+import subprocess
 import markdown
 import mdx_latex
-import subprocess
-import gtk
-
 
 class ExportDialog(gtk.Dialog):
     def __init__(self):
@@ -32,19 +31,20 @@ class MarkdownExporter():
         # Cut leading and trailing <span>-Tags
         out = out[6:-7]
 
-        print out
-
         # Add some headers and packages
         document = ["""
-\\documentclass{article}
+\\documentclass[german]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[ngerman]{babel}
 \\usepackage{graphicx}
 \\begin{document}""", out,
             '\end{document}']
 
         out = ''.join(document)
-        #print out
+        print out
 
-        return self._write_to_file(text, ''.join([filename, '.tex']))
+        return self._write_to_file(out, ''.join([filename, '.tex']))
 
     def to_plain_text(self, text, filename):
         return self._write_to_file(text, filename)

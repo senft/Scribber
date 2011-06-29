@@ -9,19 +9,19 @@ Some icons provided by the Tango Desktop Project
 (http://tango.freedesktop.org/)
 """
 
+import gtk
 import pygtk
 pygtk.require('2.0')
-import gtk
 import os
 import sys
 
-from MarkdownExporter import MarkdownExporter
 #from MarkdownExporter import ExportDialog
-from ScribberWidgets import ScribberTextView
-from ScribberWidgets import ScribberTextBuffer
+from MarkdownExporter import MarkdownExporter
+from ScribberWidgets import ScribberFadeHBox
 from ScribberWidgets import ScribberFindBox
 from ScribberWidgets import ScribberFindReplaceBox
-from ScribberWidgets import ScribberFadeHBox
+from ScribberWidgets import ScribberTextBuffer
+from ScribberWidgets import ScribberTextView
 
 
 __author__ = 'Julian Wulfheide'
@@ -438,22 +438,26 @@ class ScribberView():
         sbarbox = gtk.HBox(False, 0)
 
         # Buttons
-        self.button_focus = gtk.ToggleButton("Focus")
-        self.button_focus.set_image(
+        button_focus = gtk.ToggleButton("Focus")
+        button_focus.set_image(
             gtk.image_new_from_file("system-search.png"))
-        self.button_focus.set_active(True)
-        self.button_focus.connect("clicked", self._on_focus_click)
+        button_focus.set_active(True)
+        button_focus.connect("clicked", self._on_button_click)
 
         self.button_fullscreen = gtk.ToggleButton("Fullscreen")
         self.button_fullscreen.set_image(
-                gtk.image_new_from_file("view-fullscreen.png"))
-        self.button_fullscreen.connect("clicked", self._on_fullscreen_click)
+           gtk.image_new_from_file("view-fullscreen.png"))
+        self.button_fullscreen.connect("clicked", self._on_button_click)
+
+        self.button_actions = {}
+        self.button_actions[button_focus] = self.focus
+        self.button_actions[self.button_fullscreen] = self.fullscreen
 
         sbar_wc = gtk.Statusbar()
         context_id = sbar_wc.get_context_id("main_window")
         sbar_wc.push(context_id, "wc")
 
-        sbarbox.pack_start(self.button_focus, False, False, 0)
+        sbarbox.pack_start(button_focus, False, False, 0)
         sbarbox.pack_start(self.button_fullscreen, False, False, 0)
         sbarbox.pack_end(sbar_wc, True, True, 0)
 
@@ -461,7 +465,12 @@ class ScribberView():
 
     def _on_menu_click(self, widget, data=None):
         """ Called when clicked on a menu item. """
+        # TODO what happens when widget is not in menu_actions
         self.menu_actions[widget]()
+
+    def _on_button_click(self, widget, data=None):
+        """ Called when clicked on a button. """
+        self.button_actions[widget]()
 
     def _on_mouse_motion(self, widget, event, data=None):
         self.win.set_decorated(True)
@@ -487,14 +496,14 @@ class ScribberView():
             if self.win.get_title().endswith('*'):
                 self.win.set_title('Scribber - ' + filename)
 
-    def _on_focus_click(self, widget, data=None):
+    def focus(self):
         if self.view.focus:
             self.buffer.stop_focus()
         else:
             self.buffer.focus_current_sentence()
         self.view.focus = not self.view.focus
 
-    def _on_fullscreen_click(self, widget, data=None):
+    def fullscreen(self):
         # Gtk doesnt provied a way to check a windows state, so we have to
         # keep track ourselves
         if self.is_fullscreen:

@@ -13,13 +13,13 @@ used in a Find-Windget
 * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
 """
 
+import collections
+import gobject
+import gtk
+import pango
 import pygtk
 pygtk.require('2.0')
-import gtk
-import gobject
 import re
-import pango
-import collections
 
 
 class ScribberTextView(gtk.TextView):
@@ -85,11 +85,12 @@ class ScribberTextView(gtk.TextView):
         self.focus_current_sentence()
 
 
-class NoPatternFound(Exception):
-    pass
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
+
+    class NoPatternFound(Exception):
+        pass
 
     class Pattern:
         def __init__(self, tagn, start, end, length):
@@ -333,7 +334,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
                 if start == end:
                     finished = True
-            except NoPatternFound:
+            except self.NoPatternFound:
                 # No pattern found
                 finished = True
 
@@ -370,7 +371,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     mend, p.length]])
 
         if len(matches) == 0:
-            raise NoPatternFound('Found no matchting pattern in buffer')
+            raise self.NoPatternFound('Found no matchting pattern in buffer')
 
         return min(matches)[1]
 
