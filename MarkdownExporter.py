@@ -19,6 +19,7 @@ class MarkdownExporter():
 
     def to_pdf(self, text, filename):
         if self.to_latex(text, filename):
+            # TODO Use gobject.child_watch_add() to wait for pdflatex to finish
             subprocess.Popen(''.join(['pdflatex ', filename, ' .tex']), shell=True)
         return True
 

@@ -558,123 +558,125 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
 
 class ScribberFadeHBox(gtk.Fixed):
-    """ This is a VBox (based on a gtk.Fixed) that holds 3 children. A header,
-        a main widget and a footer. The main widget consumes all space not
-        needed by the header/footer. Also it is possible to fadeout the
-        header/footer with a nice animation. """
+    """ This is a VBox (based on a gtk.Fixed) that holds 3 children. A head,
+        a main widget and a foot. The main widget consumes all space not
+        needed by the head/foot. Also it is possible to fadeout the
+        head/foot with a nice animation. """
 
     def __init__(self):
         gtk.Fixed.__init__(self)
         self.connect('size-allocate', self.on_size_allocate)
-        self.header_offset = 0
-        self.footer_offset = 0
 
         self.main = None
-        self.header = None
-        self.footer = None
+        self.head = None
+        self.foot = None
 
         self.fading_out = False
         self.fading_in = False
 
     def add_header(self, widget):
-        self.header = widget
-        self.add(self.header)
+        self.head = widget
+        self.head.offset = 0
+        self.add(self.head)
 
     def add_footer(self, widget):
-        self.footer = widget
-        self.add(self.footer)
+        self.foot = widget
+        self.foot.offset = 0
+        self.add(self.foot)
 
-    def add_main(self, widget):
+    def add_main_widget(self, widget):
         self.main = widget
         self.add(self.main)
 
     def _resize_children(self):
         fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
 
-        header_x, header_y, header_width, header_height = \
-            self.header.get_allocation()
+        head_x, head_y, head_width, head_height = \
+            self.head.get_allocation()
 
-        footer_x, footer_y, footer_width, footer_height = \
-            self.footer.get_allocation()
+        foot_x, foot_y, foot_width, foot_height = \
+            self.foot.get_allocation()
 
-        self.main.size_allocate((0, header_height - self.header_offset,
-            fixed_width, fixed_height - header_height - footer_height +
-            self.header_offset + self.footer_offset))
+        self.main.size_allocate((0, head_height - self.head.offset,
+            fixed_width, fixed_height - head_height - foot_height +
+            self.head.offset + self.foot.offset))
 
-        if self.header.get_visible():
-            self.header.size_allocate((0, 0 - self.header_offset, fixed_width,
-                header_height))
+        if self.head.get_visible():
+            self.head.size_allocate((0, 0 - self.head.offset, fixed_width,
+                head_height))
 
-        if self.footer.get_visible():
-            self.footer.size_allocate((0, fixed_height - footer_height +
-                self.footer_offset, fixed_width, footer_height))
+        if self.foot.get_visible():
+            self.foot.size_allocate((0, fixed_height - foot_height +
+                self.foot.offset, fixed_width, foot_height))
 
     def on_size_allocate(self, widget, event, data=None):
         self._resize_children()
 
     def fadeout(self):
-        # Make sure we only call this once
-        if self.header.get_visible() and not self.fading_in:
-            gobject.timeout_add(5, self._fadeout)
+        # Make sure we only call this once, especially not while we are already
+        # fading in/out
+        if (self.head.get_visible() and not self.fading_in
+            and not self.fading_out):
+
+            self.fading_out = True
+            gobject.timeout_add(5, self._fade, self.__fadeout_check_widget, 1)
+
+            while self.fading_out:
+                # While widgets are still fading out, dont let this block
+                # the fading-process
+                gtk.main_iteration()
+
+            self.head.hide()
+            self.foot.hide()
 
     def fadein(self):
-        # Make sure we only call this once
-        if (not self.header.get_visible() and not self.fading_out and not
+        # Make sure we only call this once, especially not while we are already
+        # fading in/out
+        if (not self.head.get_visible() and not self.fading_out and not
             self.fading_in):
 
-            gobject.timeout_add(5, self._fadein)
+            self.fading_in = True
+            self.head.show()
+            self.foot.show()
+            gobject.timeout_add(5, self._fade, self.__fadein_check_widget, -1)
 
-    def _fadeout(self):
+    def __fadeout_check_widget(self, widget):
+        """Returns True if the widget isn't fully faded out."""
+        x, y, width, height = widget.get_allocation()
+        return widget.offset < height
+
+    def __fadein_check_widget(self, widget):
+        """Returns True if the widget isn't fully faded in."""
+        return widget.offset > 0
+
+    def _fade(self, check_widget, offset):
+        """ Fades the header and footer in the right direction. Returns True
+            if at least one widget has been moved.
+
+            Keyword arguments:
+            check_widget -- a function checking if a widget is fully faded
+                            in/out
+            offset -- 1 if the widget needs to be faded "up", -1 if "down"
+        """
         mod_head = False
         mod_foot = False
 
-        self.fading_out = True
+        head_x, head_y, head_width, head_height = self.head.get_allocation()
+        foot_x, foot_y, foot_width, foot_height = self.foot.get_allocation()
 
-        head_x, head_y, head_width, head_height = self.header.get_allocation()
-        foot_x, foot_y, foot_width, foot_height = self.footer.get_allocation()
-        if head_height > self.head_offset:
-            self.head_offset += 1
+        if check_widget(self.head):
+            self.head.offset += offset
             mod_head = True
 
-        if foot_height > self.foot_offset:
-            self.foot_offset += 1
+        if check_widget(self.foot):
+            self.foot.offset += offset 
             mod_foot = True
 
         self._resize_children()
 
         if not mod_head and not mod_foot:
-            # We havent moved header nor footer -> fading finished
-            self.fading_out = False
-            self.header.hide()
-            self.footer.hide()
-
-        # Return False when neither header nor footer has been modified
-        return mod_head or mod_foot
-
-    def _fadein(self):
-        mod_head = False
-        mod_foot = False
-
-        self.fading_in = True
-
-        if not self.head.get_visible(): self.head.show()
-        if not self.foot.get_visible(): self.foot.show()
-
-        head_x, head_y, head_width, head_height = self.header.get_allocation()
-        foot_x, foot_y, foot_width, foot_height = self.footer.get_allocation()
-
-        if self.head_offset > 0:
-            self.head_offset -= 1
-            mod_head = True
-
-        if self.foot_offset > 0:
-            self.foot_offset -= 1
-            mod_foot = True
-
-        self._resize_children()
-
-        if not mod_head and not mod_foot:
-            # We havent moved header nor footer -> fading finished
+            # We havent moved head nor foot -> fading finished
             self.fading_in = False
+            self.fading_out = False
 
         return mod_head or mod_foot

@@ -96,7 +96,7 @@ class ScribberView():
         vbox.pack_end(self.fix_find_replace, False, False, 0)
 
         self.fade_box = ScribberFadeHBox()
-        self.fade_box.add_main(vbox)
+        self.fade_box.add_main_widget(vbox)
         self.fade_box.add_header(self.menu_bar)
         self.fade_box.add_footer(self.status_bar)
 
