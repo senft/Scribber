@@ -365,6 +365,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     # Our first match is at the start of the range we are
                     # looking at -> We wont find a match before this ->
                     # Return this match
+                    print 'Shortcut'
                     return [p.tagn, mstart, mend, p.length]
 
                 matches.append([result_start.start(), [p.tagn, mstart,
@@ -572,16 +573,17 @@ class ScribberFadeHBox(gtk.Fixed):
         self.head = None
         self.foot = None
 
-        self.fading_out = False
-        self.fading_in = False
+        self.fading = False
 
     def add_header(self, widget):
         self.head = widget
+        # To keep track of the widgets offset
         self.head.offset = 0
         self.add(self.head)
 
     def add_footer(self, widget):
         self.foot = widget
+        # To keep track of the widgets offset
         self.foot.offset = 0
         self.add(self.foot)
 
@@ -616,13 +618,12 @@ class ScribberFadeHBox(gtk.Fixed):
     def fadeout(self):
         # Make sure we only call this once, especially not while we are already
         # fading in/out
-        if (self.head.get_visible() and not self.fading_in
-            and not self.fading_out):
+        if (self.head.get_visible() and not self.fading):
 
-            self.fading_out = True
+            self.fading= True
             gobject.timeout_add(5, self._fade, self.__fadeout_check_widget, 1)
 
-            while self.fading_out:
+            while self.fading:
                 # While widgets are still fading out, dont let this block
                 # the fading-process
                 gtk.main_iteration()
@@ -633,10 +634,8 @@ class ScribberFadeHBox(gtk.Fixed):
     def fadein(self):
         # Make sure we only call this once, especially not while we are already
         # fading in/out
-        if (not self.head.get_visible() and not self.fading_out and not
-            self.fading_in):
-
-            self.fading_in = True
+        if (not self.head.get_visible() and not self.fading):
+            self.fading= True
             self.head.show()
             self.foot.show()
             gobject.timeout_add(5, self._fade, self.__fadein_check_widget, -1)
@@ -677,7 +676,6 @@ class ScribberFadeHBox(gtk.Fixed):
 
         if not mod_head and not mod_foot:
             # We havent moved head nor foot -> fading finished
-            self.fading_in = False
-            self.fading_out = False
+            self.fading= False
 
         return mod_head or mod_foot
