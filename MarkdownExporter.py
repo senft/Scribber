@@ -6,6 +6,7 @@ import subprocess
 import markdown
 import mdx_latex
 
+
 class ExportDialog(gtk.Dialog):
     def __init__(self):
         gtk.Dialog.__init__(self)
@@ -19,7 +20,8 @@ class MarkdownExporter():
     def to_pdf(self, text, filename):
         if self.to_latex(text, filename):
             # TODO Use gobject.child_watch_add() to wait for pdflatex to finish
-            subprocess.Popen(''.join(['pdflatex ', filename, ' .tex']), shell=True)
+            subprocess.Popen(''.join(['pdflatex ', filename, ' .tex']),
+                shell=True)
         return True
 
     def to_latex(self, text, filename):

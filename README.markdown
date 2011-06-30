@@ -1,6 +1,8 @@
+#Scribber
+
 **Scribber** is a simple text editor that focuses on minimalism.
 
-# Some features:
+# Features:
 
 * Highlight the current sentence
 * Markdown syntax hilighting
@@ -11,11 +13,12 @@
 
 * GTK+
 * pdflatex
+* python-markdown
 
 # TODO:
 
 * Optimize syntax hilighting (gets very slow on large texts)
-* Add some Markdown features
+* Add some Markdown features (footnotes, ...)
 * Export to ODT
 
 

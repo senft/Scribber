@@ -85,10 +85,7 @@ class ScribberTextView(gtk.TextView):
         self.focus_current_sentence()
 
 
-
-
 class ScribberTextBuffer(gtk.TextBuffer):
-
     class NoPatternFound(Exception):
         pass
 
@@ -620,7 +617,7 @@ class ScribberFadeHBox(gtk.Fixed):
         # fading in/out
         if (self.head.get_visible() and not self.fading):
 
-            self.fading= True
+            self.fading = True
             gobject.timeout_add(5, self._fade, self.__fadeout_check_widget, 1)
 
             while self.fading:
@@ -635,7 +632,7 @@ class ScribberFadeHBox(gtk.Fixed):
         # Make sure we only call this once, especially not while we are already
         # fading in/out
         if (not self.head.get_visible() and not self.fading):
-            self.fading= True
+            self.fading = True
             self.head.show()
             self.foot.show()
             gobject.timeout_add(5, self._fade, self.__fadein_check_widget, -1)
@@ -669,13 +666,13 @@ class ScribberFadeHBox(gtk.Fixed):
             mod_head = True
 
         if check_widget(self.foot):
-            self.foot.offset += offset 
+            self.foot.offset += offset
             mod_foot = True
 
         self._resize_children()
 
         if not mod_head and not mod_foot:
             # We havent moved head nor foot -> fading finished
-            self.fading= False
+            self.fading = False
 
         return mod_head or mod_foot
