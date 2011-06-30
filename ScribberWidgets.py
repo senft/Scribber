@@ -365,13 +365,13 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     # Our first match is at the start of the range we are
                     # looking at -> We wont find a match before this ->
                     # Return this match
-                    print 'Shortcut'
+                    #print 'Shortcut'
                     return [p.tagn, mstart, mend, p.length]
 
                 matches.append([result_start.start(), [p.tagn, mstart,
                     mend, p.length]])
 
-        if len(matches) == 0:
+        if not matches:
             raise self.NoPatternFound('Found no matchting pattern in buffer')
 
         return min(matches)[1]
@@ -423,7 +423,7 @@ class ScribberFindBox(gtk.HBox):
     # TODO: When this gets shown and has a text in txt_find -> hilight that
     def __init__(self, buffer):
         gtk.HBox.__init__(self, False, 4)
-        self.matches = None
+        self.matches = collections.deque()
         self.buffer = buffer
         self.init_gui()
 
