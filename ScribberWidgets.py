@@ -68,6 +68,14 @@ class ScribberTextView(gtk.TextView):
 
         return result
 
+    def toggle_focus_mode(self):
+        if self.focus:
+            self.focus = False
+            self.get_buffer()._stop_focus()
+        else:
+            self.focus = True
+            self.focus_current_sentence()
+
     def focus_current_sentence(self):
         if self.focus:
             self.get_buffer().focus_current_sentence()
@@ -409,7 +417,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self._apply_tags = False
 
-    def stop_focus(self):
+    def _stop_focus(self):
         start = self.get_start_iter()
         end = self.get_end_iter()
         self.remove_tag_by_name("default", start, end)

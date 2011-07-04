@@ -37,6 +37,7 @@ __status__ = 'Development'
 class ScribberView():
     def __init__(self):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.win.set_default_size(500, 600)
 
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
@@ -279,7 +280,8 @@ class ScribberView():
 
     def show_help(self):
         """ Start a not-editable Scribber instance showing a help document. """
-        help = ScribberView('help.txt')
+        help = ScribberView()
+        help.open('help.txt')
         help.view.set_editable(False)
         help.go()
 
@@ -450,8 +452,8 @@ class ScribberView():
         self.button_fullscreen.connect("clicked", self._on_button_click)
 
         self.button_actions = {}
-        self.button_actions[button_focus] = self.focus
-        self.button_actions[self.button_fullscreen] = self.fullscreen
+        self.button_actions[button_focus] = self.focus_click
+        self.button_actions[self.button_fullscreen] = self.fullscreen_click
 
         sbar_wc = gtk.Statusbar()
         context_id = sbar_wc.get_context_id("main_window")
@@ -473,12 +475,13 @@ class ScribberView():
         self.button_actions[widget]()
 
     def _on_mouse_motion(self, widget, event, data=None):
-        self.win.set_decorated(True)
+        # TODO Toggling decoration is a hard "break"
+        #self.win.set_decorated(True)
         self.fade_box.fadein()
 
     def _on_buffer_changed(self, buf, iter, text, length=None):
-        self.win.set_decorated(False)
         self.fade_box.fadeout()
+        #self.win.set_decorated(False)
 
     def _on_buffer_modified_change(self, widget, data=None):
         """ Called when the TextBuffer of our TextView gets modified.
@@ -496,14 +499,12 @@ class ScribberView():
             if self.win.get_title().endswith('*'):
                 self.win.set_title('Scribber - ' + filename)
 
-    def focus(self):
-        if self.view.focus:
-            self.buffer.stop_focus()
-        else:
-            self.buffer.focus_current_sentence()
-        self.view.focus = not self.view.focus
+    def focus_click(self):
+        self.view.toggle_focus_mode()
+        # Focus TextView
+        self.win.set_focus(self.view)
 
-    def fullscreen(self):
+    def fullscreen_click(self):
         # Gtk doesnt provied a way to check a windows state, so we have to
         # keep track ourselves
         if self.is_fullscreen:
@@ -512,6 +513,9 @@ class ScribberView():
         else:
             self.win.fullscreen()
             self.is_fullscreen = True
+
+        # Focus TextView
+        self.win.set_focus(self.view)
 
     def _on_window_state_event(self, widget, event, data=None):
         """ Called when the window state changes (e.g.
