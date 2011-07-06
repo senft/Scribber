@@ -17,11 +17,9 @@ import sys
 
 #from MarkdownExporter import ExportDialog
 from MarkdownExporter import MarkdownExporter
-from ScribberWidgets import ScribberFadeHBox
-from ScribberWidgets import ScribberFindBox
-from ScribberWidgets import ScribberFindReplaceBox
-from ScribberWidgets import ScribberTextBuffer
-from ScribberWidgets import ScribberTextView
+from ScribberWidgets import (ScribberFadeHBox, ScribberFindBox,
+                             ScribberFindReplaceBox, ScribberTextBuffer,
+                             ScribberTextView)
 
 
 __author__ = 'Julian Wulfheide'
@@ -138,8 +136,9 @@ class ScribberView():
         success = False
 
         dialog = gtk.FileChooserDialog(parent=self.win, title='Save...',
-                action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
-                gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+                 action=gtk.FILE_CHOOSER_ACTION_SAVE,
+                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                 gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
         response = dialog.run()
 
@@ -156,8 +155,9 @@ class ScribberView():
         #exportdialog.show()
 
         filedialog = gtk.FileChooserDialog(parent=self.win, title='Export...',
-            action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,
-            gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+                     action=gtk.FILE_CHOOSER_ACTION_SAVE,
+                     buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                     gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
         filter_pdf = gtk.FileFilter()
         filter_pdf.set_name('PDF-Document')
@@ -180,7 +180,7 @@ class ScribberView():
             if filedialog.get_filter().get_name() == 'PDF-Document':
                 # TODO Ugly text retreavel
                 self.exporter.to_pdf(self.buffer.get_start_iter().get_text(
-                    self.buffer.get_end_iter()), file)
+                                     self.buffer.get_end_iter()), file)
             elif filedialog.get_filter().get_name() == 'Open-Office-Document':
                 self.exporter.to_odt(file)
 
@@ -197,9 +197,9 @@ class ScribberView():
             if filename is None:
                 # No filename passed, so show a open-dialog
                 dialog = gtk.FileChooserDialog(parent=self.win,
-                        title='Open...', action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                        buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                        gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+                         title='Open...', action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                         buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                         gtk.STOCK_OPEN, gtk.RESPONSE_OK))
                 response = dialog.run()
                 if response == gtk.RESPONSE_OK:
                     # A file has been selected
@@ -288,11 +288,10 @@ class ScribberView():
     def show_ask_save_dialog(self):
         """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to
             save."""
-
         dialog = gtk.MessageDialog(parent=self.win, flags=0,
-                type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
-                message_format='The document has been modified. Do you want '
-                               'to save your changes?')
+                 type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
+                 message_format='The document has been modified. Do you want '
+                                'to save your changes?')
 
         dialog.add_button('Cancel', gtk.RESPONSE_CANCEL)
         response = dialog.run()
@@ -467,12 +466,13 @@ class ScribberView():
 
     def _on_menu_click(self, widget, data=None):
         """ Called when clicked on a menu item. """
-        # TODO what happens when widget is not in menu_actions
-        self.menu_actions[widget]()
+        if widget in self.menu_actions:
+            self.menu_actions[widget]()
 
     def _on_button_click(self, widget, data=None):
         """ Called when clicked on a button. """
-        self.button_actions[widget]()
+        if widget in self.button_actions:
+            self.button_actions[widget]()
 
     def _on_mouse_motion(self, widget, event, data=None):
         # TODO Toggling decoration is a hard "break"

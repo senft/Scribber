@@ -94,6 +94,7 @@ class ScribberTextView(gtk.TextView):
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
+
     class NoPatternFound(Exception):
         pass
 
@@ -214,7 +215,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self._apply_tags = False
 
     def _find_all_matches(self, pattern, match_case=False, start=None,
-        end=None):
+                          end=None):
         """ Returns a deque containg a tuple (start_iter, end_iter) for all
             matches of 'pattern'. In order of there occurence starting from
             current cursor position."""
@@ -261,7 +262,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         return matches
 
     def replace_pattern(self, pattern, repl, start, end, match_case=False,
-        replace_all=False):
+                        replace_all=False):
 
         if start is None:
             start = self.get_start_iter()
@@ -565,32 +566,34 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
 
 class ScribberFadeHBox(gtk.Fixed):
-    """ This is a VBox (based on a gtk.Fixed) that holds 3 children. A head,
-        a main widget and a foot. The main widget consumes all space not
-        needed by the head/foot. Also it is possible to fadeout the
-        head/foot with a nice animation. """
+    """ This is a HBox (based on a gtk.Fixed) that holds 3 children. A header,
+        a main widget and a footer. The main widget consumes all space not
+        needed by the header/footer. Also it is possible to fadeout the
+        header/footer with a nice animation. """
 
     def __init__(self):
         gtk.Fixed.__init__(self)
-        self.connect('size-allocate', self.on_size_allocate)
+        self.connect('size-allocate', self._on_size_allocate)
+
+        self.FADE_DELAY = 5
+
+        self.fading_widgets = {}
 
         self.main = None
-        self.head = None
-        self.foot = None
 
         self.fading = False
 
     def add_header(self, widget):
-        self.head = widget
         # To keep track of the widgets offset
-        self.head.offset = 0
-        self.add(self.head)
+        widget.offset = 0
+        self.add(widget)
+        self.fading_widgets['head'] = widget
 
     def add_footer(self, widget):
-        self.foot = widget
         # To keep track of the widgets offset
-        self.foot.offset = 0
-        self.add(self.foot)
+        widget.offset = 0
+        self.add(widget)
+        self.fading_widgets['foot'] = widget
 
     def add_main_widget(self, widget):
         self.main = widget
@@ -598,63 +601,75 @@ class ScribberFadeHBox(gtk.Fixed):
 
     def _resize_children(self):
         fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
+        
+        head = self.fading_widgets['head']
+        foot = self.fading_widgets['foot']
 
         head_x, head_y, head_width, head_height = \
-            self.head.get_allocation()
+            head.get_allocation()
 
         foot_x, foot_y, foot_width, foot_height = \
-            self.foot.get_allocation()
+            foot.get_allocation()
 
-        self.main.size_allocate((0, head_height - self.head.offset,
+        self.main.size_allocate((0, head_height - head.offset,
             fixed_width, fixed_height - head_height - foot_height +
-            self.head.offset + self.foot.offset))
+            head.offset + foot.offset))
 
-        if self.head.get_visible():
-            self.head.size_allocate((0, 0 - self.head.offset, fixed_width,
+        if head.get_visible():
+            head.size_allocate((0, 0 - head.offset, fixed_width,
                 head_height))
 
-        if self.foot.get_visible():
-            self.foot.size_allocate((0, fixed_height - foot_height +
-                self.foot.offset, fixed_width, foot_height))
+        if foot.get_visible():
+            foot.size_allocate((0, fixed_height - foot_height +
+                foot.offset, fixed_width, foot_height))
 
-    def on_size_allocate(self, widget, event, data=None):
+    def _on_size_allocate(self, widget, event, data=None):
         self._resize_children()
 
     def fadeout(self):
-        # Make sure we only call this once, especially not while we are already
-        # fading in/out
-        if (self.head.get_visible() and not self.fading):
+        """ Checks if we are currently fading in or out, if not, starts a timer
+            that calls a fadeout function until the widgets are completely
+            faded out.
+        """
+        # Make sure we only call this once
+        if (self.fading_widgets['head'].get_visible() and not self.fading):
 
             self.fading = True
-            gobject.timeout_add(5, self._fade, self.__fadeout_check_widget, 1)
+            gobject.timeout_add(self.FADE_DELAY, self.__fade,
+                                self.__fadeout_check_widget, 1)
 
             while self.fading:
-                # While widgets are still fading out, dont let this block
-                # the fading-process
+                # While widgets are still fading out, continue in gtk.mainloop
+                # but dont continue in this codeblock right on
                 gtk.main_iteration()
 
-            self.head.hide()
-            self.foot.hide()
+            for widget in self.fading_widgets.values():
+                widget.hide()
 
     def fadein(self):
-        # Make sure we only call this once, especially not while we are already
-        # fading in/out
-        if (not self.head.get_visible() and not self.fading):
+        """ Checks if we are currently fading in or out, if not, starts a timer
+            that calls a fadein function until the widgets are completely
+            faded in.
+        """
+        # Make sure we only call this once
+        if (not self.fading_widgets['head'].get_visible() and not self.fading):
             self.fading = True
-            self.head.show()
-            self.foot.show()
-            gobject.timeout_add(5, self._fade, self.__fadein_check_widget, -1)
+            for widget in self.fading_widgets.values():
+                widget.show()
+            gobject.timeout_add(self.FADE_DELAY, self.__fade,
+                                self.__fadein_check_widget, -1)
 
     def __fadeout_check_widget(self, widget):
         """Returns True if the widget isn't fully faded out."""
-        x, y, width, height = widget.get_allocation()
-        return widget.offset < height
+        #x, y, width, height = widget.get_allocation()
+        #return widget.offset < height
+        return widget.offset < widget.get_allocation()[3]
 
     def __fadein_check_widget(self, widget):
         """Returns True if the widget isn't fully faded in."""
         return widget.offset > 0
 
-    def _fade(self, check_widget, offset):
+    def __fade(self, check_widget, offset):
         """ Fades the header and footer in the right direction. Returns True
             if at least one widget has been moved.
 
@@ -663,24 +678,18 @@ class ScribberFadeHBox(gtk.Fixed):
                             in/out
             offset -- 1 if the widget needs to be faded "up", -1 if "down"
         """
-        mod_head = False
-        mod_foot = False
+        
+        modified_widget = False
 
-        head_x, head_y, head_width, head_height = self.head.get_allocation()
-        foot_x, foot_y, foot_width, foot_height = self.foot.get_allocation()
-
-        if check_widget(self.head):
-            self.head.offset += offset
-            mod_head = True
-
-        if check_widget(self.foot):
-            self.foot.offset += offset
-            mod_foot = True
+        for widget in self.fading_widgets.values():
+            if check_widget(widget):
+                widget.offset += offset
+                modified_widget = True
 
         self._resize_children()
 
-        if not mod_head and not mod_foot:
+        if not modified_widget:
             # We havent moved head nor foot -> fading finished
             self.fading = False
 
-        return mod_head or mod_foot
+        return modified_widget
