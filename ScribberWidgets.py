@@ -98,7 +98,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
     class NoPatternFound(Exception):
         pass
 
-    class Pattern:
+    class Pattern(object):
         def __init__(self, tagn, start, end, length):
             self.tagn = tagn
             self.start = start
@@ -218,26 +218,36 @@ class ScribberTextBuffer(gtk.TextBuffer):
                           end=None):
         """ Returns a deque containg a tuple (start_iter, end_iter) for all
             matches of 'pattern'. In order of there occurence starting from
-            current cursor position."""
+            current cursor position.
+
+            Keyword arguments:
+            pattern -- the pattern to match
+            match_case -- flag, if the search should be case-sensitive
+            start -- a TextIter where to start the search. If None start at
+                     buffer start
+            end --  a TextIter where to end the search. If None end at buffer
+                    end
+        """
         #TODO: When I search for 'foo bar baz' it should also match
         # 'foo *bar* baz'
 
-        if start is None:
-            # Use current cursor position as start
+        # Used to buffer our current matches (for next/back buttons). Using a
+        # a deque for easy wrap-around
+        matches = collections.deque()
+
+        if not start:
+            # No start given -> use buffer start
             search_start = self.get_iter_at_mark(self.get_insert())
         else:
             search_start = start
 
-        if end is None:
+        if not end:
+            # No end given -> use buffer end
             search_end = self.get_end_iter()
         else:
             search_end = end
 
         text = search_start.get_text(search_end)
-
-        # Used to buffer out current matches (for next/back buttons). Using a
-        # a deque for easy wrap-around
-        matches = collections.deque()
 
         if match_case:
             needle_re = re.compile(pattern)
@@ -254,7 +264,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
             matches.append((mstart, mend))
 
         # Now match from start to current cursor
-        if start is None and end is None:
+        if not start and not end:
             matches_from_start = self._find_all_matches(pattern, match_case,
                 self.get_start_iter(), start)
 
@@ -264,10 +274,10 @@ class ScribberTextBuffer(gtk.TextBuffer):
     def replace_pattern(self, pattern, repl, start, end, match_case=False,
                         replace_all=False):
 
-        if start is None:
+        if not start:
             start = self.get_start_iter()
 
-        if end is None:
+        if not end:
             end = self.get_end_iter()
 
         text = start.get_text(end)
@@ -308,7 +318,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         # Used to save which iters we already used as start or end of a pattern
         used_iters = []
 
-        if end is None:
+        if not end:
             end = self.get_end_iter()
 
         finished = False
@@ -383,7 +393,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         return min(matches)[1]
 
     def focus_current_sentence(self):
-        """ Applys a highlighting tag to the sentence the cursor is on."""
+        """ Applys a highlighting tag to the sentence the cursor is on. """
 
         self._apply_tags = True
 
@@ -459,7 +469,7 @@ class ScribberFindBox(gtk.HBox):
             match_case=self.chk_matchcase.get_active())
 
     def _on_find_type(self, widget):
-        """ Called when text in txt_find changes """
+        """ Called when text in txt_find changes. """
         self.hilight_search(widget.get_text())
 
     def _on_key_press(self, widget, event, data=None):
@@ -530,7 +540,8 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
     def replace(self):
         """ Replaces current match. Out current match is always
-            self.matches[0] because we rotate all matches in self.matches."""
+            self.matches[0] because we rotate all matches in self.matches.
+        """
 
         start, end = self.matches[0]
         self.buffer.replace_pattern(self.txt_find.get_text(),
@@ -569,7 +580,8 @@ class ScribberFadeHBox(gtk.Fixed):
     """ This is a HBox (based on a gtk.Fixed) that holds 3 children. A header,
         a main widget and a footer. The main widget consumes all space not
         needed by the header/footer. Also it is possible to fadeout the
-        header/footer with a nice animation. """
+        header/footer with a nice animation.
+    """
 
     def __init__(self):
         gtk.Fixed.__init__(self)
@@ -635,7 +647,7 @@ class ScribberFadeHBox(gtk.Fixed):
         if (self.fading_widgets['head'].get_visible() and not self.fading):
 
             self.fading = True
-            gobject.timeout_add(self.FADE_DELAY, self.__fade,
+            gobject.timeout_add(self.FADE_DELAY, self._fade,
                                 self.__fadeout_check_widget, 1)
 
             while self.fading:
@@ -656,20 +668,20 @@ class ScribberFadeHBox(gtk.Fixed):
             self.fading = True
             for widget in self.fading_widgets.values():
                 widget.show()
-            gobject.timeout_add(self.FADE_DELAY, self.__fade,
+            gobject.timeout_add(self.FADE_DELAY, self._fade,
                                 self.__fadein_check_widget, -1)
 
     def __fadeout_check_widget(self, widget):
-        """Returns True if the widget isn't fully faded out."""
+        """ Returns True if the widget isn't fully faded out."""
         #x, y, width, height = widget.get_allocation()
         #return widget.offset < height
         return widget.offset < widget.get_allocation()[3]
 
     def __fadein_check_widget(self, widget):
-        """Returns True if the widget isn't fully faded in."""
+        """ Returns True if the widget isn't fully faded in."""
         return widget.offset > 0
 
-    def __fade(self, check_widget, offset):
+    def _fade(self, check_widget, offset):
         """ Fades the header and footer in the right direction. Returns True
             if at least one widget has been moved.
 

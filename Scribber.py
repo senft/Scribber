@@ -32,7 +32,7 @@ __email__ = 'ju.wulfheide@gmail.com'
 __status__ = 'Development'
 
 
-class ScribberView():
+class ScribberView(object):
     def __init__(self):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.win.set_default_size(500, 600)

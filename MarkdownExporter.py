@@ -13,7 +13,7 @@ class ExportDialog(gtk.Dialog):
         print dir(self)
 
 
-class MarkdownExporter():
+class MarkdownExporter(object):
     def __init__(self):
         pass
 
