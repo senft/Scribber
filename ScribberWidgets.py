@@ -138,7 +138,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
                 Pattern('underlined', re.compile(r"_\w"), re.compile(r"\w_"),
                     1),
                 Pattern('italic', re.compile(r"(?<!\*)(\*\w)"),
-                    re.compile(r"(\w\*)(?!\*)"), 1),
+                    re.compile(r"(\w\*)"), 1),
                 Pattern('bold', re.compile(r"\*\*\w"), re.compile(r"\w\*\*"),
                     2),
                 Pattern('bolditalic', re.compile(r"\*\*\*\w"),
@@ -206,13 +206,90 @@ class ScribberTextBuffer(gtk.TextBuffer):
             self.insert_at_cursor('\d ')
 
         self._apply_tags = True
-        self._update_markdown(self.get_start_iter())
+        self._update_markdown()
         self._apply_tags = False
 
     def _on_delete_range(self, buf, start, end):
         self._apply_tags = True
-        self._update_markdown(self.get_start_iter())
+        self._update_markdown()
         self._apply_tags = False
+
+    def _update_markdown(self, start=None, end=None):
+        if not start:
+            start = self.get_start_iter()
+
+        if not end:
+            end = self.get_end_iter()
+
+        # Only remove markdown tags (no focus tags)
+        for p in self.patterns:
+            self.remove_tag_by_name(p.tagn, start, end)
+
+        for match in self._get_markdown_patterns(start, end):
+            self.apply_tag_by_name(match['tagn'], match['start'], match['end'])
+
+    def _get_markdown_patterns(self, start, end):
+        """ Returns all found markdown patterns in this buffer."""
+        text = start.get_text(end)
+        for pattern in self.patterns:
+            used_iters = []
+            search_start = start.copy()
+
+            while True: 
+                try:
+                    iter_already_used = False
+                    match = self._find_pattern(pattern,
+                                             text[search_start.get_offset():],
+                                             search_start, end)
+
+                    #print 'Found match: ', match['start'].get_text(match['end'])
+                    for u in used_iters:
+                        #print 'used: ', u.get_text(end)
+                        if u.equal(match['start']):
+                            search_start.forward_chars(pattern.length)
+                            iter_already_used = True
+                    if iter_already_used:
+                        continue
+
+                    used_iters.append(match['start'])
+                    if not match['end'].equal(end):
+                        e = match['end'].copy()
+                        # TODO WTF is this shit? Why do i need to go back?!
+                        e.backward_chars(pattern.length)
+                        used_iters.append(e)
+
+                    # Continue "next" search behind this match
+                    search_start = match['start'].copy()
+                    search_start.forward_chars(pattern.length)
+
+                    yield match
+
+                except self.NoPatternFound:
+                    break
+
+    def _find_pattern(self, pattern, text, start, end):
+        # Match begining
+        result_start = pattern.start.search(text)
+
+        if result_start:
+            # Forward until start of match
+            start_index = result_start.start()
+            mstart = start.copy()
+            mstart.forward_chars(start_index)
+
+            # Match end (start searching _after_ the matched start)
+            result_end = pattern.end.search(text[start_index:])
+            if result_end:
+                mend = mstart.copy()
+                mend.forward_chars(result_end.end())
+            else:
+                # No pattern for end found -> match until end
+                mend = self.get_end_iter() 
+
+            return ({'tagn' : pattern.tagn, 'start' : mstart,
+                     'end' : mend, 'length' : pattern.length})
+        else:
+            raise self.NoPatternFound("Pattern not found.")
 
     def _find_all_matches(self, pattern, match_case=False, start=None,
                           end=None):
@@ -249,12 +326,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         text = search_start.get_text(search_end)
 
-        if match_case:
-            needle_re = re.compile(pattern)
-        else:
-            needle_re = re.compile(pattern, re.IGNORECASE)
-
-        for match in needle_re.finditer(text):
+        for match in pattern.finditer(text):
             mstart = search_start.copy()
             mend = search_start.copy()
 
@@ -314,83 +386,51 @@ class ScribberTextBuffer(gtk.TextBuffer):
         end = self.get_end_iter()
         self.remove_tag_by_name('match', start, end)
 
-    def _update_markdown(self, start, end=None):
-        # Used to save which iters we already used as start or end of a pattern
-        used_iters = []
 
-        if not end:
-            end = self.get_end_iter()
-
-        finished = False
-
-        # Only remove markdown tags (no focus tags)
-        for p in self.patterns:
-            self.remove_tag_by_name(p.tagn, start, end)
-
-        while not finished:
-            try:
-                tagn, mstart, mend, length = self._get_first_pattern(start,
-                    end)
-
-                if (mstart.get_offset() + length) in used_iters or \
-                    (mend.get_offset() in used_iters and not mend.equal(end)):
-                    # Iterators have been used -> skip match.
-                    # End-iterator can be used multiple times, though.
-                    start = mstart
-                    start.forward_chars(length)
-                    continue
-
-                self.apply_tag_by_name(tagn, mstart, mend)
-
-                used_iters.append(mstart.get_offset())
-                used_iters.append(mend.get_offset())
-
-                start = mstart
-                start.forward_chars(length)
-
-                if start == end:
-                    finished = True
-            except self.NoPatternFound:
-                # No pattern found
-                finished = True
-
-    def _get_first_pattern(self, start, end):
-        """ Returns (tagname, start, end, length) of the first occurence of any
-            known pattern in this buffer. """
-        matches = []
-
-        for p in self.patterns:
-            mstart = start.copy()
-
-            # Match begining
-            result_start = p.start.search(mstart.get_text(end))
-            if result_start:
-                # Forward until start of match
-                mstart.forward_chars(result_start.start())
-
-                # Match end
-                result_end = p.end.search(mstart.get_text(end))
-                if result_end:
-                    mend = mstart.copy()
-                    mend.forward_chars(result_end.end())
-                else:
-                    # No pattern for end found -> match until end
-                    mend = self.get_end_iter()
-
-                if mstart.equal(start):
-                    # Our first match is at the start of the range we are
-                    # looking at -> We wont find a match before this ->
-                    # Return this match
-                    #print 'Shortcut'
-                    return [p.tagn, mstart, mend, p.length]
-
-                matches.append([result_start.start(), [p.tagn, mstart,
-                    mend, p.length]])
-
-        if not matches:
-            raise self.NoPatternFound('Found no matchting pattern in buffer')
-
-        return min(matches)[1]
+#    def _get_first_pattern(self, start, end):
+#        """ Returns (tagname, start, end, length) of the first occurence of any
+#            known pattern in this buffer. """
+#        matches = []
+#
+#        for p in self.patterns:
+#            mstart = start.copy()
+#
+#            # Match begining
+#            result_start = p.start.search(mstart.get_text(end))
+#            if result_start:
+#                if matches:
+#                    if result_start.start() > min(matches)[0]:
+#                        # Out current match is behind our (so-far) first
+#                        # match -> We dont need to match the end
+#                        #print 'shortcut'
+#                        continue
+#
+#                # Forward until start of match
+#                mstart.forward_chars(result_start.start())
+#
+#                # Match end
+#                result_end = p.end.search(mstart.get_text(end))
+#                if result_end:
+#                    mend = mstart.copy()
+#                    mend.forward_chars(result_end.end())
+#                else:
+#                    # No pattern for end found -> match until end
+#                    mend = self.get_end_iter()
+#
+#                if mstart.equal(start):
+#                    # Our first match is at the start of the range we are
+#                    # looking at -> We wont find a match before this ->
+#                    # Return this match
+#                    #print 'Shortcut'
+#                    return [p.tagn, mstart, mend, p.length]
+#
+#                matches.append([result_start.start(), [p.tagn, mstart,
+#                    mend, p.length]])
+#
+#        if not matches:
+#            raise self.NoPatternFound('Found no matchting pattern in buffer')
+#
+#        return min(matches)[1]
 
     def focus_current_sentence(self):
         """ Applys a highlighting tag to the sentence the cursor is on. """
@@ -465,8 +505,20 @@ class ScribberFindBox(gtk.HBox):
         self.add(self.chk_matchcase)
 
     def hilight_search(self, text):
-        self.matches = self.buffer.hilight_pattern(text,
+        text = self._escape_text(text)
+        if self.chk_matchcase:
+            pattern = re.compile(text)
+        else:
+            pattern = re.compile(text, re.IGNORECASE)
+
+        self.matches = self.buffer.hilight_pattern(pattern,
             match_case=self.chk_matchcase.get_active())
+
+    def _escape_text(self, text):
+        for c in ['\\', '*', '.', '$', '^', '?', '+', '(', ')', '{', '}', '[',
+                  ']', '|', ':', '#', '<', '>', '=', '!']:
+            text = text.replace(c, ''.join(['\\', c]))
+        return text
 
     def _on_find_type(self, widget):
         """ Called when text in txt_find changes. """
@@ -583,16 +635,16 @@ class ScribberFadeHBox(gtk.Fixed):
         header/footer with a nice animation.
     """
 
+    UP = 1
+    DOWN = -1
+
     def __init__(self):
         gtk.Fixed.__init__(self)
         self.connect('size-allocate', self._on_size_allocate)
 
         self.FADE_DELAY = 5
-
-        self.fading_widgets = {}
-
+        self.fading_widgets = { 'head' : None, 'foot' : None}
         self.main = None
-
         self.fading = False
 
     def add_header(self, widget):
@@ -648,7 +700,8 @@ class ScribberFadeHBox(gtk.Fixed):
 
             self.fading = True
             gobject.timeout_add(self.FADE_DELAY, self._fade,
-                                self.__fadeout_check_widget, 1)
+                                self.__fadeout_check_widget,
+                                ScribberFadeHBox.UP)
 
             while self.fading:
                 # While widgets are still fading out, continue in gtk.mainloop
@@ -669,7 +722,8 @@ class ScribberFadeHBox(gtk.Fixed):
             for widget in self.fading_widgets.values():
                 widget.show()
             gobject.timeout_add(self.FADE_DELAY, self._fade,
-                                self.__fadein_check_widget, -1)
+                                self.__fadein_check_widget,
+                                ScribberFadeHBox.DOWN)
 
     def __fadeout_check_widget(self, widget):
         """ Returns True if the widget isn't fully faded out."""
