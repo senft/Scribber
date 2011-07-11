@@ -41,7 +41,7 @@ class ScribberView(object):
         gtk.rc_parse(".gtkrc")
 
         self.buffer = ScribberTextBuffer()
-        self.view = ScribberTextView()
+        self.view = ScribberTextView(self.win)
         self.view.set_buffer(self.buffer)
 
         # GTK doesnt provide a way to check wether a window is fullscreen or
@@ -101,17 +101,13 @@ class ScribberView(object):
 
         self.win.add(self.fade_box)
 
-    def go(self):
+    def run(self):
         """ Show Scribber instance. """
         # Go!
         self.win.show_all()
         self.fix_find.hide()
         self.fix_find_replace.hide()
         gtk.main()
-
-    def new(self):
-        new = ScribberView()
-        new.go()
 
     def save(self):
         if not self.filename:
@@ -173,16 +169,14 @@ class ScribberView(object):
 
         if response == gtk.RESPONSE_OK:
             filename = filedialog.get_filename()
-            print('Export to: ', filename)
-
-            file, ext = os.path.splitext(filename)
+            filepath, ext = os.path.splitext(filename)
 
             if filedialog.get_filter().get_name() == 'PDF-Document':
                 # TODO Ugly text retreavel
                 self.exporter.to_pdf(self.buffer.get_start_iter().get_text(
-                                     self.buffer.get_end_iter()), file)
+                                     self.buffer.get_end_iter()), filepath)
             elif filedialog.get_filter().get_name() == 'Open-Office-Document':
-                self.exporter.to_odt(file)
+                self.exporter.to_odt(filepath)
 
         filedialog.destroy()
 
@@ -280,10 +274,10 @@ class ScribberView(object):
 
     def show_help(self):
         """ Start a not-editable Scribber instance showing a help document. """
-        help = ScribberView()
-        help.open('help.txt')
-        help.view.set_editable(False)
-        help.go()
+        help_win = ScribberView()
+        help_win.open('help.txt')
+        help_win.view.set_editable(False)
+        help_win.go()
 
     def show_ask_save_dialog(self):
         """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to
@@ -415,12 +409,12 @@ class ScribberView(object):
 
         self.menu_actions = {}
 
-        self.menu_actions[newm] = self.new
+        self.menu_actions[newm] = new_instance
         self.menu_actions[savem] = self.save
         self.menu_actions[saveasm] = self.save_as
         self.menu_actions[exportm] = self.export
         self.menu_actions[openm] = self.open
-        self.menu_actions[quitm] = self.new
+        self.menu_actions[quitm] = new_instance
 
         self.menu_actions[copym] = self.copy
         self.menu_actions[cutm] = self.cut
@@ -479,7 +473,7 @@ class ScribberView(object):
         #self.win.set_decorated(True)
         self.fade_box.fadein()
 
-    def _on_buffer_changed(self, buf, iter, text, length=None):
+    def _on_buffer_changed(self, buffer, iter, text, length=None):
         self.fade_box.fadeout()
         #self.win.set_decorated(False)
 
@@ -543,12 +537,16 @@ class ScribberView(object):
     def destroy(self, widget, data=None):
         gtk.main_quit()
 
+def new_instance():
+    new = ScribberView()
+    new.run()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        scribber = ScribberView()
-        scribber.open(sys.argv[1])
+        # TODO Make some real arg parsing here
+        INST = ScribberView()
+        INST.open(sys.argv[1])
     else:
-        scribber = ScribberView()
+        INST = ScribberView()
 
-    scribber.go()
+    INST.run()

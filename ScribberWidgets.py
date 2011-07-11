@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 
 """
-All custom widgets used in Scribber.
-* ScribberTextView is a gtk.TextView with some basic formatting and
-mechanisms to focus the current sentence
-* ScribberTextBuffer is the underlying gtk.TextBuffer. It has automatic
-Markdown-Syntax-Hilighting and features simple hilighting for find and
-replace
-* ScribberFindBox is a simple gtk.HBox containing the usual widgets
-used in a Find-Windget
-* ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
+Custom widgets used in Scribber.
+    * ScribberTextView is a gtk.TextView with some basic formatting and
+      mechanisms to focus the current sentence
+    * ScribberTextBuffer is the underlying gtk.TextBuffer. It has automatic
+      Markdown-Syntax-Hilighting and features simple hilighting for find and
+      replace
+    * ScribberFindBox is a simple gtk.HBox containing the usual widgets
+      used in a Find-Windget
+    * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
 """
 
 import collections
@@ -22,17 +22,32 @@ pygtk.require('2.0')
 import re
 
 
+def escape_text(text):
+        for char in ['\\', '*', '.', '$', '^', '?', '+', '(', ')', '{', '}',
+                     '[', ']', '|', ':', '#', '<', '>', '=', '!']:
+            text = text.replace(char, ''.join(['\\', char]))
+        return text
+
+
 class ScribberTextView(gtk.TextView):
-    def __init__(self):
+    def __init__(self, parent_window):
         gtk.TextView.__init__(self)
 
         self.focus = True
+
+        self.parent_window = parent_window
 
         self.connect_after('key-press-event', self._on_key_event)
         self.connect('key-release-event', self._on_key_event)
         self.connect_after('button-press-event', self._on_button_event)
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
+
+
+        self.image_window = gtk.Window(gtk.WINDOW_POPUP)
+        self.image_window.set_decorated(False)
+        self.image_window.set_default_size(300, 300)
+        self.image_window.add(gtk.Label("hallo"))
 
         font = pango.FontDescription("Deja Vu Sans Mono  11")
         self.modify_font(font)
@@ -48,13 +63,13 @@ class ScribberTextView(gtk.TextView):
         self.set_left_margin(80)
 
         # Line spacing
-        self.set_pixels_inside_wrap(7)
+        self.set_pixels_inside_wrap(5)
 
     def open_file(self, filename):
         result = True
         try:
-            with open(filename, 'r') as f:
-                data = f.read()
+            with open(filename, 'r') as fileo:
+                data = fileo.read()
 
             self.get_buffer().set_text(data)
 
@@ -71,26 +86,51 @@ class ScribberTextView(gtk.TextView):
     def toggle_focus_mode(self):
         if self.focus:
             self.focus = False
-            self.get_buffer()._stop_focus()
+            self.get_buffer().stop_focus()
         else:
             self.focus = True
             self.focus_current_sentence()
 
     def focus_current_sentence(self):
+        """ Highlights the current sentence and scroll it to the middle of
+            the gtkTextView.
+        """
         if self.focus:
             self.get_buffer().focus_current_sentence()
             # Scroll cursor to middle of TextView
             self.scroll_to_mark(self.get_buffer().get_insert(), 0.0, True,
                 0.0, 0.5)
 
-    def _on_move_cursor(self, widet, step_size, count, xtnd_slctn, data=None):
+    def _on_move_cursor(self, widget, step_size, count, extend_selection,
+                        data=None):
         self.focus_current_sentence()
 
     def _on_key_event(self, widget, event, data=None):
         self.focus_current_sentence()
+        if self.get_buffer().get_iter_at_mark(self.get_buffer().get_insert()).has_tag(self.get_buffer().tag_image):
+            self.show_image_at_cursor()
+        else:
+            self.hide_image_window()
 
     def _on_button_event(self, widget, event, data=None):
         self.focus_current_sentence()
+        if self.get_buffer().get_iter_at_mark(self.get_buffer().get_insert()).has_tag(self.get_buffer().tag_image):
+            self.show_image_at_cursor()
+        else:
+            self.hide_image_window()
+
+    def show_image_at_cursor(self):
+        if not self.image_window.get_visible():
+            window_x, window_y = self.parent_window.get_position()
+            self_x, self_y, self_width, self_height =  self.get_allocation()
+            cursor = self.get_buffer().get_iter_at_mark(self.get_buffer().get_insert())
+            x, y, width, height = self.get_iter_location(cursor)
+            x, y = self.buffer_to_window_coords(gtk.TEXT_WINDOW_WIDGET, x, y)
+            self.image_window.move(x + width + window_x + self_x, y + height + window_y + self_y)
+            self.image_window.show_all()
+
+    def hide_image_window(self):
+        self.image_window.hide()
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
@@ -99,7 +139,18 @@ class ScribberTextBuffer(gtk.TextBuffer):
         pass
 
     class Pattern(object):
+        """ Represents one markdown-pattern."""
         def __init__(self, tagn, start, end, length):
+            """ Keyword arguments:
+            tagn -- the tagname of the tag that should be applied to the
+                    matched pattern
+            start -- the start pattern of the whole pattern
+            end -- the end pattern of the whole pattern
+            length -- the length of the start-pattern. We need this so we can
+                      skip the start of the pattern to continue searching, and
+                      not be stuck on matching the begining over and over
+                      again.
+            """
             self.tagn = tagn
             self.start = start
             self.end = end
@@ -135,6 +186,9 @@ class ScribberTextBuffer(gtk.TextBuffer):
                 Pattern('blockquote', re.compile(r"^>", re.MULTILINE),
                     re.compile(r"\n"), 1),
 
+                Pattern('image', re.compile(r"\!\(\w*\)\[\w*\]"),
+                        re.compile(r"\[\w*\]"), 1),
+                
                 Pattern('underlined', re.compile(r"_\w"), re.compile(r"\w_"),
                     1),
                 Pattern('italic', re.compile(r"(?<!\*)(\*\w)"),
@@ -176,6 +230,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.tag_blockquote = self.create_tag('blockquote', left_margin=110,
             style=pango.STYLE_ITALIC)
 
+        self.tag_image = self.create_tag('image', style=pango.STYLE_ITALIC)
+
         self.tag_underlined = self.create_tag("underlined",
             underline=pango.UNDERLINE_SINGLE)
         self.tag_bold = self.create_tag("bold", weight=pango.WEIGHT_BOLD)
@@ -183,7 +239,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self.tag_bolditalic = self.create_tag("bolditalic",
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
 
-    def _on_apply_tag(self, buf, tag, start, end):
+    def _on_apply_tag(self, buffer, tag, start, end):
         # FIXME This is a hack! It allows apply-tag only while
         #       _on_insert_text() and _on_delete_range() so we dont paste
         #       tagged text
@@ -191,7 +247,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
             self.emit_stop_by_name('apply-tag')
             return True
 
-    def _on_insert_text(self, buf, iter, text, length):
+    def _on_insert_text(self, buffer, iter, text, length):
         # Continue a table if we got one
         if iter.has_tag(self.tag_table_default) and text == '\n':
             start = iter.copy()
@@ -209,12 +265,15 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self._update_markdown()
         self._apply_tags = False
 
-    def _on_delete_range(self, buf, start, end):
+    def _on_delete_range(self, buffer, start, end):
         self._apply_tags = True
         self._update_markdown()
         self._apply_tags = False
 
     def _update_markdown(self, start=None, end=None):
+        """ Removes all tags from whole buffer and renews markdown syntax
+            highlighting from "bottom to top".
+        """
         if not start:
             start = self.get_start_iter()
 
@@ -222,11 +281,13 @@ class ScribberTextBuffer(gtk.TextBuffer):
             end = self.get_end_iter()
 
         # Only remove markdown tags (no focus tags)
-        for p in self.patterns:
-            self.remove_tag_by_name(p.tagn, start, end)
+        for pattern in self.patterns:
+            self.remove_tag_by_name(pattern.tagn, start, end)
 
-        for match in self._get_markdown_patterns(start, end):
-            self.apply_tag_by_name(match['tagn'], match['start'], match['end'])
+        for pattern in self._get_markdown_patterns(start, end):
+            self.apply_tag_by_name(pattern['tagn'], pattern['start'],
+                                   pattern['end'])
+
 
     def _get_markdown_patterns(self, start, end):
         """ Returns all found markdown patterns in this buffer."""
@@ -235,17 +296,15 @@ class ScribberTextBuffer(gtk.TextBuffer):
             used_iters = []
             search_start = start.copy()
 
-            while True: 
+            while True:
                 try:
                     iter_already_used = False
                     match = self._find_pattern(pattern,
-                                             text[search_start.get_offset():],
-                                             search_start, end)
+                            text[search_start.get_offset():end.get_offset()],
+                            search_start, end)
 
-                    #print 'Found match: ', match['start'].get_text(match['end'])
-                    for u in used_iters:
-                        #print 'used: ', u.get_text(end)
-                        if u.equal(match['start']):
+                    for iter in used_iters:
+                        if iter.equal(match['start']):
                             search_start.forward_chars(pattern.length)
                             iter_already_used = True
                     if iter_already_used:
@@ -253,10 +312,10 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
                     used_iters.append(match['start'])
                     if not match['end'].equal(end):
-                        e = match['end'].copy()
+                        new_end = match['end'].copy()
                         # TODO WTF is this shit? Why do i need to go back?!
-                        e.backward_chars(pattern.length)
-                        used_iters.append(e)
+                        new_end.backward_chars(pattern.length)
+                        used_iters.append(new_end)
 
                     # Continue "next" search behind this match
                     search_start = match['start'].copy()
@@ -268,6 +327,13 @@ class ScribberTextBuffer(gtk.TextBuffer):
                     break
 
     def _find_pattern(self, pattern, text, start, end):
+        """ Returns the first occurence of pattern in text.
+            Keyword arguments:
+            pattern -- the RE object to match
+            text -- the text in which to search
+            start -- the beginning of 'text' in the gtkTextBuffer
+            end -- the end of 'text' in the gtkTextBuffer
+        """
         # Match begining
         result_start = pattern.start.search(text)
 
@@ -284,22 +350,20 @@ class ScribberTextBuffer(gtk.TextBuffer):
                 mend.forward_chars(result_end.end())
             else:
                 # No pattern for end found -> match until end
-                mend = self.get_end_iter() 
+                mend = self.get_end_iter()
 
-            return ({'tagn' : pattern.tagn, 'start' : mstart,
-                     'end' : mend, 'length' : pattern.length})
+            return dict(tagn=pattern.tagn, start=mstart, end=mend,
+                        length=pattern.length)
         else:
             raise self.NoPatternFound("Pattern not found.")
 
-    def _find_all_matches(self, pattern, match_case=False, start=None,
-                          end=None):
+    def _find_all_matches(self, pattern, start=None, end=None):
         """ Returns a deque containg a tuple (start_iter, end_iter) for all
             matches of 'pattern'. In order of there occurence starting from
             current cursor position.
 
             Keyword arguments:
             pattern -- the pattern to match
-            match_case -- flag, if the search should be case-sensitive
             start -- a TextIter where to start the search. If None start at
                      buffer start
             end --  a TextIter where to end the search. If None end at buffer
@@ -308,8 +372,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
         #TODO: When I search for 'foo bar baz' it should also match
         # 'foo *bar* baz'
 
-        # Used to buffer our current matches (for next/back buttons). Using a
-        # a deque for easy wrap-around
         matches = collections.deque()
 
         if not start:
@@ -337,13 +399,13 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         # Now match from start to current cursor
         if not start and not end:
-            matches_from_start = self._find_all_matches(pattern, match_case,
+            matches_from_start = self._find_all_matches(pattern, 
                 self.get_start_iter(), start)
 
             matches.extend(matches_from_start)
         return matches
 
-    def replace_pattern(self, pattern, repl, start, end, match_case=False,
+    def replace_pattern(self, pattern, repl, start=None, end=None,
                         replace_all=False):
 
         if not start:
@@ -362,13 +424,13 @@ class ScribberTextBuffer(gtk.TextBuffer):
             self.delete_selection(True, True)
             self.insert_at_cursor(text)
 
-    def hilight_pattern(self, pattern, match_case=False):
+    def hilight_pattern(self, pattern):
         """ Hilights all matches in buffer and selects the match next to
             current cursor position. """
         self.remove_tag_by_name('match', self.get_start_iter(),
             self.get_end_iter())
 
-        matches = self._find_all_matches(pattern, match_case)
+        matches = self._find_all_matches(pattern)
 
         if matches:
             # If we have matches, we want to make the first match selected
@@ -385,52 +447,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
         start = self.get_start_iter()
         end = self.get_end_iter()
         self.remove_tag_by_name('match', start, end)
-
-
-#    def _get_first_pattern(self, start, end):
-#        """ Returns (tagname, start, end, length) of the first occurence of any
-#            known pattern in this buffer. """
-#        matches = []
-#
-#        for p in self.patterns:
-#            mstart = start.copy()
-#
-#            # Match begining
-#            result_start = p.start.search(mstart.get_text(end))
-#            if result_start:
-#                if matches:
-#                    if result_start.start() > min(matches)[0]:
-#                        # Out current match is behind our (so-far) first
-#                        # match -> We dont need to match the end
-#                        #print 'shortcut'
-#                        continue
-#
-#                # Forward until start of match
-#                mstart.forward_chars(result_start.start())
-#
-#                # Match end
-#                result_end = p.end.search(mstart.get_text(end))
-#                if result_end:
-#                    mend = mstart.copy()
-#                    mend.forward_chars(result_end.end())
-#                else:
-#                    # No pattern for end found -> match until end
-#                    mend = self.get_end_iter()
-#
-#                if mstart.equal(start):
-#                    # Our first match is at the start of the range we are
-#                    # looking at -> We wont find a match before this ->
-#                    # Return this match
-#                    #print 'Shortcut'
-#                    return [p.tagn, mstart, mend, p.length]
-#
-#                matches.append([result_start.start(), [p.tagn, mstart,
-#                    mend, p.length]])
-#
-#        if not matches:
-#            raise self.NoPatternFound('Found no matchting pattern in buffer')
-#
-#        return min(matches)[1]
 
     def focus_current_sentence(self):
         """ Applys a highlighting tag to the sentence the cursor is on. """
@@ -468,7 +484,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self._apply_tags = False
 
-    def _stop_focus(self):
+    def stop_focus(self):
+        """ Removes all highlighting tags from buffer."""
         start = self.get_start_iter()
         end = self.get_end_iter()
         self.remove_tag_by_name("default", start, end)
@@ -505,20 +522,13 @@ class ScribberFindBox(gtk.HBox):
         self.add(self.chk_matchcase)
 
     def hilight_search(self, text):
-        text = self._escape_text(text)
-        if self.chk_matchcase:
+        text = escape_text(text)
+        if self.chk_matchcase.get_active():
             pattern = re.compile(text)
         else:
             pattern = re.compile(text, re.IGNORECASE)
 
-        self.matches = self.buffer.hilight_pattern(pattern,
-            match_case=self.chk_matchcase.get_active())
-
-    def _escape_text(self, text):
-        for c in ['\\', '*', '.', '$', '^', '?', '+', '(', ')', '{', '}', '[',
-                  ']', '|', ':', '#', '<', '>', '=', '!']:
-            text = text.replace(c, ''.join(['\\', c]))
-        return text
+        self.matches = self.buffer.hilight_pattern(pattern)
 
     def _on_find_type(self, widget):
         """ Called when text in txt_find changes. """
@@ -605,8 +615,8 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
     def replace_all(self):
         self.buffer.replace_pattern(self.txt_find.get_text(),
-            self.txt_replace.get_text(), start=None, end=None,
-                match_case=self.chk_matchcase, replace_all=True)
+                                    self.txt_replace.get_text(), start=None,
+                                    end=None, replace_all=True)
 
     def _on_key_press(self, widget, event, data=None):
         if gtk.gdk.keyval_name(event.keyval) == 'Return':
@@ -637,43 +647,43 @@ class ScribberFadeHBox(gtk.Fixed):
 
     UP = 1
     DOWN = -1
+    FADE_DELAY = 5
 
     def __init__(self):
         gtk.Fixed.__init__(self)
         self.connect('size-allocate', self._on_size_allocate)
 
-        self.FADE_DELAY = 5
-        self.fading_widgets = { 'head' : None, 'foot' : None}
+        self.fading_widgets = dict(head=None, foot=None)
         self.main = None
         self.fading = False
 
     def add_header(self, widget):
         # To keep track of the widgets offset
         widget.offset = 0
+        #widget.set_parent(self)
         self.add(widget)
         self.fading_widgets['head'] = widget
 
     def add_footer(self, widget):
         # To keep track of the widgets offset
         widget.offset = 0
+        #widget.set_parent(self)
         self.add(widget)
         self.fading_widgets['foot'] = widget
 
     def add_main_widget(self, widget):
+        #widget.set_parent(self)
         self.main = widget
         self.add(self.main)
 
     def _resize_children(self):
         fixed_x, fixed_y, fixed_width, fixed_height = self.get_allocation()
-        
         head = self.fading_widgets['head']
         foot = self.fading_widgets['foot']
 
-        head_x, head_y, head_width, head_height = \
-            head.get_allocation()
+        head_x, head_y, head_width, head_height = head.get_allocation()
 
-        foot_x, foot_y, foot_width, foot_height = \
-            foot.get_allocation()
+        foot_x, foot_y, foot_width, foot_height = foot.get_allocation()
 
         self.main.size_allocate((0, head_height - head.offset,
             fixed_width, fixed_height - head_height - foot_height +
@@ -699,14 +709,14 @@ class ScribberFadeHBox(gtk.Fixed):
         if (self.fading_widgets['head'].get_visible() and not self.fading):
 
             self.fading = True
-            gobject.timeout_add(self.FADE_DELAY, self._fade,
+            gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
                                 self.__fadeout_check_widget,
                                 ScribberFadeHBox.UP)
 
             while self.fading:
                 # While widgets are still fading out, continue in gtk.mainloop
                 # but dont continue in this codeblock right on
-                gtk.main_iteration()
+                gtk.main_iteration_do(False)
 
             for widget in self.fading_widgets.values():
                 widget.hide()
@@ -717,19 +727,18 @@ class ScribberFadeHBox(gtk.Fixed):
             faded in.
         """
         # Make sure we only call this once
-        if (not self.fading_widgets['head'].get_visible() and not self.fading):
+        if not self.fading_widgets['head'].get_visible() and not self.fading:
             self.fading = True
             for widget in self.fading_widgets.values():
                 widget.show()
-            gobject.timeout_add(self.FADE_DELAY, self._fade,
+            gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
                                 self.__fadein_check_widget,
                                 ScribberFadeHBox.DOWN)
 
     def __fadeout_check_widget(self, widget):
         """ Returns True if the widget isn't fully faded out."""
-        #x, y, width, height = widget.get_allocation()
-        #return widget.offset < height
-        return widget.offset < widget.get_allocation()[3]
+        x, y, width, height = widget.get_allocation()
+        return widget.offset < height
 
     def __fadein_check_widget(self, widget):
         """ Returns True if the widget isn't fully faded in."""
@@ -744,7 +753,7 @@ class ScribberFadeHBox(gtk.Fixed):
                             in/out
             offset -- 1 if the widget needs to be faded "up", -1 if "down"
         """
-        
+
         modified_widget = False
 
         for widget in self.fading_widgets.values():

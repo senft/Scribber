@@ -20,6 +20,7 @@
 * Optimize syntax hilighting (gets very slow on large texts)
 * Add some Markdown features (footnotes, ...)
 * Export to ODT
+* When hovering an image-code display the image in a tooltip
 
 
 Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)</br />
