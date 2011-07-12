@@ -27,7 +27,7 @@ __copyright__ = 'Copyright 2011, Julian Wulfheide'
 __credits__ = ['Julian Wulfheide', ]
 __license__ = 'MIT'
 __maintainer__ = 'Julian Wulfheide'
-__version__ = '0.1'
+__version__ = 'dev'
 __email__ = 'ju.wulfheide@gmail.com'
 __status__ = 'Development'
 
@@ -536,6 +536,7 @@ class ScribberView(object):
 
     def destroy(self, widget, data=None):
         gtk.main_quit()
+
 
 def new_instance():
     new = ScribberView()

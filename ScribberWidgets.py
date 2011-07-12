@@ -43,7 +43,6 @@ class ScribberTextView(gtk.TextView):
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
 
-
         self.image_window = gtk.Window(gtk.WINDOW_POPUP)
         self.image_image = gtk.Image()
         self.image_window.set_decorated(False)
@@ -131,7 +130,7 @@ class ScribberTextView(gtk.TextView):
             self.image_image.set_from_file(image)
 
             window_x, window_y = self.parent_window.get_position()
-            self_x, self_y, self_width, self_height =  self.get_allocation()
+            self_x, self_y, self_width, self_height = self.get_allocation()
             cursor = self.get_buffer().get_iter_at_mark(
                     self.get_buffer().get_insert())
             x, y, width, height = self.get_iter_location(cursor)
@@ -199,7 +198,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
                 Pattern('image', re.compile(r"\!\(\w*\)\[\w|.+\]"),
                         re.compile(r"\[\w|.+\]"), 1),
-                
+
                 Pattern('underlined', re.compile(r"_\w"), re.compile(r"\w_"),
                     1),
                 Pattern('italic', re.compile(r"(?<!\*)(\*\w)"),
@@ -301,7 +300,6 @@ class ScribberTextBuffer(gtk.TextBuffer):
         for pattern in self._get_markdown_patterns(start, end):
             self.apply_tag_by_name(pattern['tagn'], pattern['start'],
                                    pattern['end'])
-
 
     def _get_markdown_patterns(self, start, end):
         """ Returns all found markdown patterns in this buffer."""
@@ -413,7 +411,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         # Now match from start to current cursor
         if not start and not end:
-            matches_from_start = self._find_all_matches(pattern, 
+            matches_from_start = self._find_all_matches(pattern,
                 self.get_start_iter(), start)
 
             matches.extend(matches_from_start)
