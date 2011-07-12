@@ -45,9 +45,12 @@ class ScribberTextView(gtk.TextView):
 
 
         self.image_window = gtk.Window(gtk.WINDOW_POPUP)
+        self.image_image = gtk.Image()
         self.image_window.set_decorated(False)
-        self.image_window.set_default_size(300, 300)
-        self.image_window.add(gtk.Label("hallo"))
+        self.image_window.set_default_size(200, 200)
+        image_hbox = gtk.HBox()
+        image_hbox.add(self.image_image)
+        self.image_window.add(image_hbox)
 
         font = pango.FontDescription("Deja Vu Sans Mono  11")
         self.modify_font(font)
@@ -73,8 +76,7 @@ class ScribberTextView(gtk.TextView):
 
             self.get_buffer().set_text(data)
 
-            # TODO Maybe memorize cursor position from last time editing
-            # this file
+            # TODO Memorize cursor position from last time editing this file
             self.get_buffer().place_cursor(self.get_buffer().get_start_iter())
             self.focus_current_sentence()
             self.get_buffer().set_modified(False)
@@ -104,29 +106,38 @@ class ScribberTextView(gtk.TextView):
     def _on_move_cursor(self, widget, step_size, count, extend_selection,
                         data=None):
         self.focus_current_sentence()
+        self.toggle_image_window()
 
     def _on_key_event(self, widget, event, data=None):
         self.focus_current_sentence()
-        if self.get_buffer().get_iter_at_mark(self.get_buffer().get_insert()).has_tag(self.get_buffer().tag_image):
-            self.show_image_at_cursor()
-        else:
-            self.hide_image_window()
+        self.toggle_image_window()
 
     def _on_button_event(self, widget, event, data=None):
         self.focus_current_sentence()
-        if self.get_buffer().get_iter_at_mark(self.get_buffer().get_insert()).has_tag(self.get_buffer().tag_image):
-            self.show_image_at_cursor()
+        self.toggle_image_window()
+
+    def toggle_image_window(self):
+        # TODO: UGLY
+        cursor = self.get_buffer().get_cursor_iter()
+        if cursor.has_tag(self.get_buffer().tag_image):
+            # TODO: Parse the filename correctly
+            self.show_image_window('system-search.png')
         else:
             self.hide_image_window()
 
-    def show_image_at_cursor(self):
+    def show_image_window(self, image):
         if not self.image_window.get_visible():
+
+            self.image_image.set_from_file(image)
+
             window_x, window_y = self.parent_window.get_position()
             self_x, self_y, self_width, self_height =  self.get_allocation()
-            cursor = self.get_buffer().get_iter_at_mark(self.get_buffer().get_insert())
+            cursor = self.get_buffer().get_iter_at_mark(
+                    self.get_buffer().get_insert())
             x, y, width, height = self.get_iter_location(cursor)
             x, y = self.buffer_to_window_coords(gtk.TEXT_WINDOW_WIDGET, x, y)
-            self.image_window.move(x + width + window_x + self_x, y + height + window_y + self_y)
+            self.image_window.move(x + width + window_x + self_x,
+                                   y + height + window_y + self_y)
             self.image_window.show_all()
 
     def hide_image_window(self):
@@ -186,8 +197,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
                 Pattern('blockquote', re.compile(r"^>", re.MULTILINE),
                     re.compile(r"\n"), 1),
 
-                Pattern('image', re.compile(r"\!\(\w*\)\[\w*\]"),
-                        re.compile(r"\[\w*\]"), 1),
+                Pattern('image', re.compile(r"\!\(\w*\)\[\w|.+\]"),
+                        re.compile(r"\[\w|.+\]"), 1),
                 
                 Pattern('underlined', re.compile(r"_\w"), re.compile(r"\w_"),
                     1),
@@ -269,6 +280,9 @@ class ScribberTextBuffer(gtk.TextBuffer):
         self._apply_tags = True
         self._update_markdown()
         self._apply_tags = False
+
+    def get_cursor_iter(self):
+        return self.get_iter_at_mark(self.get_insert())
 
     def _update_markdown(self, start=None, end=None):
         """ Removes all tags from whole buffer and renews markdown syntax
@@ -647,7 +661,7 @@ class ScribberFadeHBox(gtk.Fixed):
 
     UP = 1
     DOWN = -1
-    FADE_DELAY = 5
+    FADE_DELAY = 3
 
     def __init__(self):
         gtk.Fixed.__init__(self)
@@ -713,10 +727,10 @@ class ScribberFadeHBox(gtk.Fixed):
                                 self.__fadeout_check_widget,
                                 ScribberFadeHBox.UP)
 
-            while self.fading:
-                # While widgets are still fading out, continue in gtk.mainloop
-                # but dont continue in this codeblock right on
-                gtk.main_iteration_do(False)
+            # TODO: gtk.main_iteration seems to block, though it shouldnt...
+#            while self.fading:
+#                # While widgets are still fading out, continue in gtk.mainloop
+#                gtk.main_iteration(False)
 
             for widget in self.fading_widgets.values():
                 widget.hide()

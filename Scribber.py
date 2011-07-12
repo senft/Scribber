@@ -35,7 +35,6 @@ __status__ = 'Development'
 class ScribberView(object):
     def __init__(self):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.win.set_default_size(500, 600)
 
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
@@ -445,8 +444,8 @@ class ScribberView(object):
         self.button_fullscreen.connect("clicked", self._on_button_click)
 
         self.button_actions = {}
-        self.button_actions[button_focus] = self.focus_click
-        self.button_actions[self.button_fullscreen] = self.fullscreen_click
+        self.button_actions[button_focus] = self.focus
+        self.button_actions[self.button_fullscreen] = self.fullscreen
 
         sbar_wc = gtk.Statusbar()
         context_id = sbar_wc.get_context_id("main_window")
@@ -457,6 +456,24 @@ class ScribberView(object):
         sbarbox.pack_end(sbar_wc, True, True, 0)
 
         return sbarbox
+
+    def focus(self):
+        self.view.toggle_focus_mode()
+        # Focus TextView
+        self.win.set_focus(self.view)
+
+    def fullscreen(self):
+        # Gtk doesnt provied a way to check a windows state, so we have to
+        # keep track ourselves
+        if self.is_fullscreen:
+            self.win.unfullscreen()
+            self.is_fullscreen = False
+        else:
+            self.win.fullscreen()
+            self.is_fullscreen = True
+
+        # Focus TextView
+        self.win.set_focus(self.view)
 
     def _on_menu_click(self, widget, data=None):
         """ Called when clicked on a menu item. """
@@ -493,24 +510,6 @@ class ScribberView(object):
             if self.win.get_title().endswith('*'):
                 self.win.set_title('Scribber - ' + filename)
 
-    def focus_click(self):
-        self.view.toggle_focus_mode()
-        # Focus TextView
-        self.win.set_focus(self.view)
-
-    def fullscreen_click(self):
-        # Gtk doesnt provied a way to check a windows state, so we have to
-        # keep track ourselves
-        if self.is_fullscreen:
-            self.win.unfullscreen()
-            self.is_fullscreen = False
-        else:
-            self.win.fullscreen()
-            self.is_fullscreen = True
-
-        # Focus TextView
-        self.win.set_focus(self.view)
-
     def _on_window_state_event(self, widget, event, data=None):
         """ Called when the window state changes (e.g.
             Fullscreen/Unfullscreen). Needed to determine the correct state
@@ -527,11 +526,12 @@ class ScribberView(object):
         self.view.focus_current_sentence()
 
     def _delete_event(self, widget, event, data=None):
-        # When this returns True we dont quit
         response = None
         if self.buffer.get_modified():
             response = self.show_ask_save_dialog()
 
+        # When this returns True (when the Safe-Dialog was canceled) we dont
+        # quit
         return response == gtk.RESPONSE_CANCEL
 
     def destroy(self, widget, data=None):
