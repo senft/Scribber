@@ -17,6 +17,7 @@ import sys
 
 #from MarkdownExporter import ExportDialog
 from MarkdownExporter import MarkdownExporter
+from MarkdownSyntaxHL import MarkdownSyntaxHL
 from ScribberWidgets import (ScribberFadeHBox, ScribberFindBox,
                              ScribberFindReplaceBox, ScribberTextBuffer,
                              ScribberTextView)
@@ -40,6 +41,7 @@ class ScribberView(object):
         gtk.rc_parse(".gtkrc")
 
         self.buffer = ScribberTextBuffer()
+        self.syntax_hl = MarkdownSyntaxHL(self.buffer)
         self.view = ScribberTextView(self.win)
         self.view.set_buffer(self.buffer)
 
@@ -64,7 +66,7 @@ class ScribberView(object):
         self.buffer.connect('modified-changed',
             self._on_buffer_modified_change)
 
-        # To hide or show the bars
+        # To hide and show the bars
         self.buffer.connect("insert-text", self._on_buffer_changed)
         self.buffer.connect("delete-range", self._on_buffer_changed)
 
