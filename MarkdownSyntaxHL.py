@@ -167,7 +167,6 @@ class MarkdownSyntaxHL(object):
 
             while True:
                 try:
-#                    iter_already_used = False
                     match = self._find_pattern(pattern,
                             text[search_start.get_offset():end.get_offset()],
                             search_start, end)
@@ -175,14 +174,6 @@ class MarkdownSyntaxHL(object):
                     if match['start'].get_offset() in used_iters:
                         search_start.forward_chars(pattern.length)
                         continue
-#                    for iter in used_iters:
-#                        if iter.equal(match['start']):
-#                            print iter.get_offset(), match['start'].get_offset()
-#                            search_start.forward_chars(pattern.length)
-#                            iter_already_used = True
-#                            break
-#                    if iter_already_used:
-#                        continue
 
                     used_iters.add(match['start'].get_offset())
                     if not match['end'].equal(end):
