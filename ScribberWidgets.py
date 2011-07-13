@@ -118,7 +118,7 @@ class ScribberTextView(gtk.TextView):
     def toggle_image_window(self):
         # TODO: UGLY
         cursor = self.get_buffer().get_cursor_iter()
-        if cursor.has_tag(self.get_buffer().tag_image):
+        if cursor.has_tag(self.get_buffer().tags['image']):
             # TODO: Parse the filename correctly
             self.show_image_window('system-search.png')
         else:
@@ -145,48 +145,15 @@ class ScribberTextView(gtk.TextView):
 
 class ScribberTextBuffer(gtk.TextBuffer):
 
-    class NoPatternFound(Exception):
-        pass
-
     def __init__(self):
         gtk.TextBuffer.__init__(self)
-        self.tag_default = self.create_tag("default", foreground="#888888")
-        self.tag_focus = self.create_tag("focus", foreground="#000000")
-        self.tag_match = self.create_tag('match', background='#FFFF00')
+        self.tags = {}
+        self.tags['default'] = self.create_tag("default", foreground="#888888")
+        self.tags['focus'] = self.create_tag("focus", foreground="#000000")
+        self.tags['match'] = self.create_tag('match', background='#FFFF00')
 
     def get_cursor_iter(self):
         return self.get_iter_at_mark(self.get_insert())
-
-    def _find_pattern(self, pattern, text, start, end):
-        """ Returns the first occurence of pattern in text.
-            Keyword arguments:
-            pattern -- the RE object to match
-            text -- the text in which to search
-            start -- the beginning of 'text' in the gtkTextBuffer
-            end -- the end of 'text' in the gtkTextBuffer
-        """
-        # Match begining
-        result_start = pattern.start.search(text)
-
-        if result_start:
-            # Forward until start of match
-            start_index = result_start.start()
-            mstart = start.copy()
-            mstart.forward_chars(start_index)
-
-            # Match end (start searching _after_ the matched start)
-            result_end = pattern.end.search(text[start_index:])
-            if result_end:
-                mend = mstart.copy()
-                mend.forward_chars(result_end.end())
-            else:
-                # No pattern for end found -> match until end
-                mend = self.get_end_iter()
-
-            return dict(tagn=pattern.tagn, start=mstart, end=mend,
-                        length=pattern.length)
-        else:
-            raise self.NoPatternFound("Pattern not found.")
 
     def _find_all_matches(self, pattern, start=None, end=None):
         """ Returns a deque containg a tuple (start_iter, end_iter) for all
