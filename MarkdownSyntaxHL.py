@@ -12,7 +12,7 @@ class NoPatternFound(Exception):
 
 class Pattern(object):
     """ Represents one markdown-pattern."""
-    def __init__(self, tagn, start, length, end=None, flags=0):
+    def __init__(self, tagn, start, end=None, flags=0):
         """ Keyword arguments:
         tagn -- the tagname of the tag that should be applied to the
                 matched pattern
@@ -32,35 +32,34 @@ class Pattern(object):
             self.end = re.compile(end, flags)
         else:
             self.end = None
-        self.length = length
 
-patterns = [# atx headers
-            Pattern('heading1', r"^\# .*$", 1, flags=re.MULTILINE),
-            Pattern('heading2', r"^\#\# .*$", 1, flags=re.MULTILINE),
-            Pattern('heading3', r"^\#{3} .*$", 1, flags=re.MULTILINE),
-            Pattern('heading4', r"^\#{4} .*$", 1, flags=re.MULTILINE),
-            Pattern('heading5', r"^\#{5} .*$", 1, flags=re.MULTILINE),
-            Pattern('heading6', r"^\#{6} .*$", 1, flags=re.MULTILINE),
-            # Setext headers
-            Pattern('heading1', r"^(.+?)\n(=+)$", 1, flags=re.MULTILINE),
-            Pattern('heading2', r"^(?![\!-\*\+])(.+?)\n(-+)$", 1,
+patterns = [
+            # atx headers
+            Pattern('heading6', r"^(\#{6} ).*$", flags=re.MULTILINE),
+            Pattern('heading5', r"^(\#{5} ).*$", flags=re.MULTILINE),
+            Pattern('heading4', r"^(\#{4} ).*$", flags=re.MULTILINE),
+            Pattern('heading3', r"^(\#{3} ).*$", flags=re.MULTILINE),
+            Pattern('heading2', r"^(\#\# ).*$", flags=re.MULTILINE),
+            Pattern('heading1', r"^(\# ).*$", flags=re.MULTILINE),
+            Pattern('heading1', r"\n(.).+?\n(=+)$", flags=re.MULTILINE),
+            Pattern('heading2', r"\n(?![!\-*+])(.).+?\n(-+)$", 
                     flags=re.MULTILINE),
 
             # tables
-            Pattern('table_default', r"^\* .*?$", 1, flags=re.MULTILINE),
-            Pattern('table_default', r"^\+ .*?$", 1, flags=re.MULTILINE),
-            Pattern('table_default', r"^\- .*?$", 1, flags=re.MULTILINE),
-            Pattern('table_sorted', r"^\d+\. .*?$", 1, flags=re.MULTILINE),
+            Pattern('table_default', r"^([+\-*] ).*?$", flags=re.MULTILINE),
+            Pattern('table_sorted', r"^(\d+\. ).*?$", flags=re.MULTILINE),
 
-            Pattern('blockquote', r"^>", 1, flags=re.MULTILINE, end=r"\n"),
+            Pattern('blockquote', r"^(> )", flags=re.MULTILINE, end=r"\n"),
 
-            Pattern('image', r"\!\(\w*\)\[\w|.+\]", 1, end=r"\[\w|.+\]"),
+            Pattern('image', r"(\!\(\w*\)\[(\w|.+)\])"),
 
             # basic inline formatting
-            Pattern('underlined', r"_\w", 1, end=r"\w_"),
-            Pattern('italic', r"(?<!\*)(\*\w)", 1, end=r"(\w\*)"),
-            Pattern('bold', r"\*\*\w", 2, end=r"\w\*\*"),
-            Pattern('bolditalic', r"\*\*\*\w", 3, end=r"\w\*\*\*")]
+            # TODO: The \w at stars and ends doesnt match . ,, etc...
+            Pattern('bolditalic', r"(\*\*\*\w)", end=r"(\w\*\*\*)"),
+            Pattern('bold', r"(?<!\*)(\*\*\w)", end=r"(\w\*\*)"),
+            Pattern('underlined', r"(_\w)", end=r"(\w_)"),
+            Pattern('italic', r"((?<!\*)\*\w)", end=r"(\w\*)")
+            ]
 
 
 class MarkdownSyntaxHL(object):
@@ -106,37 +105,6 @@ class MarkdownSyntaxHL(object):
         self.tags['bolditalic'] = self.buffer.create_tag("bolditalic",
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
 
-    def _on_apply_tag(self, buffer, tag, start, end):
-        # FIXME This is a hack! It allows apply-tag only while
-        #       _on_insert_text() and _on_delete_range() so we dont paste
-        #       tagged text
-        if not self.buffer._apply_tags:
-            self.buffer.emit_stop_by_name('apply-tag')
-            return True
-
-    def _on_insert_text(self, buffer, iter, text, length):
-        # Continue a table if we got one
-        if iter.has_tag(self.tags['table_default']) and text == '\n':
-            start = iter.copy()
-            start.backward_line()
-
-            if start.get_text(iter) == '* \n':
-                self.buffer.delete(start, iter)
-            else:
-                self.buffer.insert_at_cursor('* ')
-        elif iter.has_tag(self.buffer.tags['table_sorted']) and text == '\n':
-            # Same
-            self.buffer.insert_at_cursor('\d ')
-
-        self.buffer._apply_tags = True
-        self._update_markdown()
-        self.buffer._apply_tags = False
-
-    def _on_delete_range(self, buffer, start, end):
-        self.buffer._apply_tags = True
-        self._update_markdown()
-        self.buffer._apply_tags = False
-
     def get_cursor_iter(self):
         return self.buffer.get_iter_at_mark(self.buffer.get_insert())
 
@@ -160,9 +128,19 @@ class MarkdownSyntaxHL(object):
 
     def _get_markdown_patterns(self, start, end):
         """ Returns all found markdown patterns in this buffer."""
+
+        # We retrieve the text of the whole region one time, and search in
+        # slices of this text, so we dont have to call iter.get_text() over and
+        # over.
         text = start.get_text(end)
         for pattern in patterns:
+            # Save which position we already used in a pattern, so we dont use
+            # a pattern we already used as and end, as a start (e.g. in
+            # 'f*oo*bar' both asteriks can be seen as the start and the end of
+            # a pattern).
             used_iters = set()
+
+            # Begin at the start of the region to search for every pattern
             search_start = start.copy()
 
             while True:
@@ -171,20 +149,28 @@ class MarkdownSyntaxHL(object):
                             text[search_start.get_offset():end.get_offset()],
                             search_start, end)
 
-                    if match['start'].get_offset() in used_iters:
-                        search_start.forward_chars(pattern.length)
+                    # start or end already used?
+                    if (match['start'].get_offset() in used_iters or
+                        match['end'].get_offset() in used_iters):
+                        search_start.forward_chars(match['start_del'])
                         continue
 
+                    # TODO: We only need to save inline elements like bold,
+                    # italic... not headings, etc..
                     used_iters.add(match['start'].get_offset())
                     if not match['end'].equal(end):
                         new_end = match['end'].copy()
-                        # TODO WTF is this shit? Why do i need to go back?!
-                        new_end.backward_chars(pattern.length)
+                        # We need to go back here, because match['end'] points
+                        # to the end of the end delimiter, but we need the
+                        # start. When | represents an iter, we have:
+                        # **foobar**|, but we need **foobar|**
+                        if match['end_del']:
+                            new_end.backward_chars(match['end_del'] - 1)
                         used_iters.add(new_end.get_offset())
 
-                    # Continue "next" search behind this match
+                    # Continue next search behind this match
                     search_start = match['start'].copy()
-                    search_start.forward_chars(pattern.length)
+                    search_start.forward_chars(match['start_del'])
 
                     yield match
 
@@ -205,6 +191,12 @@ class MarkdownSyntaxHL(object):
         result_start = pattern.start.search(text)
 
         if result_start:
+            # The exact length of the start delimiter, used to skip the
+            # delimiter and continue searching behind it
+            start_delimit_length = len(result_start.group(0))
+            # Same for the end delimiter (not shure if we need it, though)
+            end_delimit_length = None
+
             # Forward until start of match
             start_index = result_start.start()
             mstart = start.copy()
@@ -217,6 +209,7 @@ class MarkdownSyntaxHL(object):
                 if result_end:
                     mend = mstart.copy()
                     mend.forward_chars(result_end.end())
+                    end_delimit_length = len(result_end.group(0))
                 else:
                     # No pattern for end found -> match until end
                     mend = self.buffer.get_end_iter()
@@ -227,8 +220,38 @@ class MarkdownSyntaxHL(object):
                 mend.forward_chars(result_start.end())
 
             return dict(tagn=pattern.tagn, start=mstart, end=mend,
-                        length=pattern.length)
+                        start_del=start_delimit_length,
+                        end_del=end_delimit_length)
         else:
             raise NoPatternFound("Pattern not found.")
 
+    def _on_apply_tag(self, buffer, tag, start, end):
+        # FIXME This is a hack! It allows apply-tag only while
+        #       _on_insert_text() and _on_delete_range() so we dont paste
+        #       tagged text
+        if not self.buffer._apply_tags:
+            self.buffer.emit_stop_by_name('apply-tag')
+            return True
 
+    def _on_insert_text(self, buffer, iter, text, length):
+        # Continue a table if we got one
+        if iter.has_tag(self.tags['table_default']) and text == '\n':
+            start = iter.copy()
+            start.backward_line()
+
+            if start.get_text(iter) == '* \n':
+                self.buffer.delete(start, iter)
+            else:
+                self.buffer.insert_at_cursor('* ')
+        elif iter.has_tag(self.buffer.tags['table_sorted']) and text == '\n':
+            # TODO: Read number and increase
+            self.buffer.insert_at_cursor('\d ')
+
+        self.buffer._apply_tags = True
+        self._update_markdown()
+        self.buffer._apply_tags = False
+
+    def _on_delete_range(self, buffer, start, end):
+        self.buffer._apply_tags = True
+        self._update_markdown()
+        self.buffer._apply_tags = False

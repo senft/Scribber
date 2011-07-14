@@ -22,16 +22,11 @@ pygtk.require('2.0')
 import re
 
 
-def escape_text(text):
-        for char in ['\\', '*', '.', '$', '^', '?', '+', '(', ')', '{', '}',
-                     '[', ']', '|', ':', '#', '<', '>', '=', '!']:
-            text = text.replace(char, ''.join(['\\', char]))
-        return text
-
-
 class ScribberTextView(gtk.TextView):
     def __init__(self, parent_window):
         gtk.TextView.__init__(self)
+
+        #self.set_border_window_size(gtk.TEXT_WINDOW_TOP, 100)
 
         self.focus = True
 
@@ -43,13 +38,13 @@ class ScribberTextView(gtk.TextView):
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
 
+        self.set_accepts_tab(True)
+
         self.image_window = gtk.Window(gtk.WINDOW_POPUP)
         self.image_image = gtk.Image()
         self.image_window.set_decorated(False)
         self.image_window.set_default_size(200, 200)
-        image_hbox = gtk.HBox()
-        image_hbox.add(self.image_image)
-        self.image_window.add(image_hbox)
+        self.image_window.add(self.image_image)
 
         font = pango.FontDescription("Deja Vu Sans Mono  11")
         self.modify_font(font)
@@ -116,10 +111,17 @@ class ScribberTextView(gtk.TextView):
         self.toggle_image_window()
 
     def toggle_image_window(self):
-        # TODO: UGLY
+        tag_image = self.get_buffer().tags['image']
         cursor = self.get_buffer().get_cursor_iter()
-        if cursor.has_tag(self.get_buffer().tags['image']):
+        if cursor.has_tag(tag_image):
             # TODO: Parse the filename correctly
+            start = cursor.copy()
+            start.backward_to_tag_toggle(tag_image)
+            end = cursor.copy()
+            end.forward_to_tag_toggle(tag_image)
+
+            image = start.get_text(end)
+
             self.show_image_window('system-search.png')
         else:
             self.hide_image_window()
@@ -148,8 +150,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
     def __init__(self):
         gtk.TextBuffer.__init__(self)
         self.tags = {}
-        self.tags['default'] = self.create_tag("default", foreground="#888888")
-        self.tags['focus'] = self.create_tag("focus", foreground="#000000")
+        self.tags['blurr_out'] = self.create_tag("blurr_out",
+                                                 foreground="#888888")
         self.tags['match'] = self.create_tag('match', background='#FFFF00')
 
     def get_cursor_iter(self):
@@ -251,34 +253,21 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self._apply_tags = True
 
-        cursor_iter = self.get_iter_at_mark(self.get_insert())
-
-        starts_sentence = cursor_iter.starts_sentence()
-        inside_sentence = cursor_iter.inside_sentence()
-        ends_sentence = cursor_iter.ends_sentence()
+        cursor= self.get_iter_at_mark(self.get_insert())
 
         start = self.get_start_iter()
         end = self.get_end_iter()
+        mstart = cursor.copy()
+        mend = cursor.copy()
 
-        mstart = cursor_iter.copy()
-        mend = cursor_iter.copy()
+        if not cursor.starts_sentence():
+            mstart.backward_sentence_start()
+        if not cursor.ends_sentence():
+            mend.forward_sentence_end()
 
-        self.remove_tag_by_name("focus", start, end)
-
-        if starts_sentence or inside_sentence or ends_sentence:
-            #if cursor_iter.has_tag(self.tag_table_default):
-            #    # Hilight current table
-            #    mstart.backward_to_tag_toggle(self.tag_table_default)
-            #    mend.forward_to_tag_toggle(self.tag_table_default)
-            #else:
-            #    # Hilight current sentence
-            #    if not starts_sentence:
-            #        mstart.backward_sentence_start()
-            #    if not ends_sentence:
-            #        mend.forward_sentence_end()
-
-            self.apply_tag_by_name("default", start, end)
-            self.apply_tag_by_name("focus", mstart, mend)
+        self.remove_tag_by_name("blurr_out", start, end)
+        self.apply_tag_by_name("blurr_out", start, mstart)
+        self.apply_tag_by_name("blurr_out", mend, end)
 
         self._apply_tags = False
 
@@ -320,7 +309,7 @@ class ScribberFindBox(gtk.HBox):
         self.add(self.chk_matchcase)
 
     def hilight_search(self, text):
-        text = escape_text(text)
+        text = re.escape(text)
         if self.chk_matchcase.get_active():
             pattern = re.compile(text)
         else:
