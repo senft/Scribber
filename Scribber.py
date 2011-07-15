@@ -18,9 +18,8 @@ import sys
 #from MarkdownExporter import ExportDialog
 from MarkdownExporter import MarkdownExporter
 from MarkdownSyntaxHL import MarkdownSyntaxHL
-from ScribberWidgets import (ScribberFadeHBox, ScribberFindBox,
-                             ScribberFindReplaceBox, ScribberTextBuffer,
-                             ScribberTextView)
+from Widgets import (ScribberFadeHBox, ScribberFindBox, ScribberFindReplaceBox,
+                     ScribberTextBuffer, ScribberTextView)
 
 
 __author__ = 'Julian Wulfheide'

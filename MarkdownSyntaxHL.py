@@ -1,7 +1,6 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
-
 import pango
 import re
 
@@ -16,11 +15,11 @@ class Pattern(object):
         """ Keyword arguments:
         tagn -- the tagname of the tag that should be applied to the
                 matched pattern
-        start -- the start pattern of the whole pattern
-        length -- the length of the start-pattern. We need this so we can
-                  skip the start of the pattern to continue searching, and
-                  not be stuck on matching the begining over and over
-                  again.
+        start -- the start pattern of the whole pattern (group 0 of this
+                 pattern has to be the part of the match we want to skip before
+                 continung searching. In a basic inline pattern this is usually
+                 the pattern delimiter. In a pattern where wo dont expect
+                 nested patterns, it can be the whole pattern.
         end -- if you want to match a specific end, independently from your
                start, define the pattern here
         flags -- RE.flags for the patterns (seperator multiple flags with a '|'
@@ -33,7 +32,7 @@ class Pattern(object):
         else:
             self.end = None
 
-patterns = [
+PATTERNS = [
             # atx headers
             Pattern('heading6', r"^(\#{6} ).*$", flags=re.MULTILINE),
             Pattern('heading5', r"^(\#{5} ).*$", flags=re.MULTILINE),
@@ -41,32 +40,36 @@ patterns = [
             Pattern('heading3', r"^(\#{3} ).*$", flags=re.MULTILINE),
             Pattern('heading2', r"^(\#\# ).*$", flags=re.MULTILINE),
             Pattern('heading1', r"^(\# ).*$", flags=re.MULTILINE),
-            Pattern('heading1', r"\n(.).+?\n(=+)$", flags=re.MULTILINE),
-            Pattern('heading2', r"\n(?![!\-*+])(.).+?\n(-+)$", 
+            # Setext headers
+            Pattern('heading1', r"^(.).+?\n(=+)$", flags=re.MULTILINE),
+            Pattern('heading2', r"^(?![!\-*+])(.).+?\n(-+)$", 
                     flags=re.MULTILINE),
 
             # tables
             Pattern('table_default', r"^([+\-*] ).*?$", flags=re.MULTILINE),
             Pattern('table_sorted', r"^(\d+\. ).*?$", flags=re.MULTILINE),
 
-            Pattern('blockquote', r"^(> )", flags=re.MULTILINE, end=r"\n"),
+            Pattern('blockquote', r"^(> ).+?$", flags=re.MULTILINE),
 
-            Pattern('image', r"(\!\(\w*\)\[(\w|.+)\])"),
+            Pattern('image', r"(\!\(.*\)\[(.+)\])"),
 
             # basic inline formatting
-            # TODO: The \w at stars and ends doesnt match . ,, etc...
-            Pattern('bolditalic', r"(\*\*\*\w)", end=r"(\w\*\*\*)"),
-            Pattern('bold', r"(?<!\*)(\*\*\w)", end=r"(\w\*\*)"),
-            Pattern('underlined', r"(_\w)", end=r"(\w_)"),
-            Pattern('italic', r"((?<!\*)\*\w)", end=r"(\w\*)")
+            Pattern('bolditalic', r"(\*\*\*[^s])", end=r"([^s]\*\*\*)"),
+            Pattern('bold', r"(?<!\*)(\*\*[^s])", end=r"([^s]\*\*)"),
+            Pattern('underlined', r"(_[^s])", end=r"([^s]_)"),
+            Pattern('italic', r"((?<!\*)\*[^\s])", end=r"([^\s]\*)")
             ]
 
 
 class MarkdownSyntaxHL(object):
-    def __init__(self, buffer):
-        self.buffer = buffer
+    """
+    Adds markdown syntax hilighting to a gtk.TextBuffer.
+    """
 
-        self.tags = buffer.tags
+    def __init__(self, buf):
+        self.buffer = buf
+
+        self.tags = buf.tags
 
         self.buffer.connect_after("insert-text", self._on_insert_text)
         self.buffer.connect_after("delete-range", self._on_delete_range)
@@ -106,6 +109,7 @@ class MarkdownSyntaxHL(object):
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
 
     def get_cursor_iter(self):
+        """ Returns a gtk.TextIter pointing to the current cursor position."""
         return self.buffer.get_iter_at_mark(self.buffer.get_insert())
 
     def _update_markdown(self, start=None, end=None):
@@ -119,7 +123,7 @@ class MarkdownSyntaxHL(object):
             end = self.buffer.get_end_iter()
 
         # Only remove markdown tags (no focus tags)
-        for pattern in patterns:
+        for pattern in PATTERNS:
             self.buffer.remove_tag_by_name(pattern.tagn, start, end)
 
         for pattern in self._get_markdown_patterns(start, end):
@@ -133,11 +137,13 @@ class MarkdownSyntaxHL(object):
         # slices of this text, so we dont have to call iter.get_text() over and
         # over.
         text = start.get_text(end)
-        for pattern in patterns:
-            # Save which position we already used in a pattern, so we dont use
-            # a pattern we already used as and end, as a start (e.g. in
-            # 'f*oo*bar' both asteriks can be seen as the start and the end of
-            # a pattern).
+        for pattern in PATTERNS:
+            # Save which positions we already used as an end or a start of a
+            # pattern, so we dont use positions we already used as and end,
+            # as the start of another match(e.g. in 'fo*ob*ar' both asteriks
+            # can be seen as the start and the end of a pattern. So we have
+            # to remember that we already used the second asterik as the end
+            # of a pattern.
             used_iters = set()
 
             # Begin at the start of the region to search for every pattern
@@ -147,7 +153,7 @@ class MarkdownSyntaxHL(object):
                 try:
                     match = self._find_pattern(pattern,
                             text[search_start.get_offset():end.get_offset()],
-                            search_start, end)
+                            search_start)
 
                     # start or end already used?
                     if (match['start'].get_offset() in used_iters or
@@ -177,14 +183,13 @@ class MarkdownSyntaxHL(object):
                 except NoPatternFound:
                     break
 
-    def _find_pattern(self, pattern, text, start, end):
+    def _find_pattern(self, pattern, text, start):
         """ Returns the first occurence of pattern in text.
 
             Keyword arguments:
             pattern -- the RE object to match
             text -- the text in which to search
             start -- the beginning of 'text' in the overlaying gtkTextBuffer
-            end -- the end of 'text' in the overlaying gtkTextBuffer
         """
 
         # Match begining
@@ -225,7 +230,7 @@ class MarkdownSyntaxHL(object):
         else:
             raise NoPatternFound("Pattern not found.")
 
-    def _on_apply_tag(self, buffer, tag, start, end):
+    def _on_apply_tag(self, buf, tag, start, end):
         # FIXME This is a hack! It allows apply-tag only while
         #       _on_insert_text() and _on_delete_range() so we dont paste
         #       tagged text
@@ -233,7 +238,7 @@ class MarkdownSyntaxHL(object):
             self.buffer.emit_stop_by_name('apply-tag')
             return True
 
-    def _on_insert_text(self, buffer, iter, text, length):
+    def _on_insert_text(self, buf, iter, text, length):
         # Continue a table if we got one
         if iter.has_tag(self.tags['table_default']) and text == '\n':
             start = iter.copy()
@@ -251,7 +256,7 @@ class MarkdownSyntaxHL(object):
         self._update_markdown()
         self.buffer._apply_tags = False
 
-    def _on_delete_range(self, buffer, start, end):
+    def _on_delete_range(self, buf, start, end):
         self.buffer._apply_tags = True
         self._update_markdown()
         self.buffer._apply_tags = False
