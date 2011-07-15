@@ -186,8 +186,9 @@ class ScribberView(object):
             response = self.show_ask_save_dialog()
 
         # If save-dialog has been canceled, cancel open, too
-        if not response == gtk.RESPONSE_CANCEL:
-            if filename is None:
+        if (not response == gtk.RESPONSE_CANCEL or 
+            not response == gtk.RESPONSE_DELETE_EVENT):
+            if not filename:
                 # No filename passed, so show a open-dialog
                 dialog = gtk.FileChooserDialog(parent=self.win,
                          title='Open...', action=gtk.FILE_CHOOSER_ACTION_OPEN,
@@ -202,11 +203,20 @@ class ScribberView(object):
 
             # Open-dialog might have been canceled, so check for
             # filename != None again
-            if filename is not None:
+            if filename:
                 # Finally open the file
-                self.view.open_file(filename)
-                self.win.set_title(''.join(['Scribber - ', filename]))
-                self.filename = filename
+                try:
+                    self.view.open_file(filename)
+                    self.win.set_title(''.join(['Scribber - ', filename]))
+                    self.filename = filename
+                except IOError as e:
+                    dialog = gtk.MessageDialog(parent=self.win,
+                                           message_format='Could not open file.',
+                                           buttons=gtk.BUTTONS_OK,
+                                           type=gtk.MESSAGE_ERROR)
+                    dialog.format_secondary_text(str(e))
+                    dialog.connect("response", lambda d, r: d.destroy())
+                    dialog.run()
 
     def delete(self):
         """ Deletes the currently selected text in out TextBuffer."""

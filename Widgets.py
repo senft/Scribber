@@ -26,8 +26,6 @@ class ScribberTextView(gtk.TextView):
     def __init__(self, parent_window):
         gtk.TextView.__init__(self)
 
-        #self.set_border_window_size(gtk.TEXT_WINDOW_TOP, 100)
-
         self.focus = True
 
         self.parent_window = parent_window
