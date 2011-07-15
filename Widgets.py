@@ -63,7 +63,6 @@ class ScribberTextView(gtk.TextView):
         self.set_pixels_inside_wrap(5)
 
     def open_file(self, filename):
-        result = True
         try:
             with open(filename, 'r') as fileo:
                 data = fileo.read()
@@ -75,9 +74,8 @@ class ScribberTextView(gtk.TextView):
             self.focus_current_sentence()
             self.get_buffer().set_modified(False)
         except IOError:
-            result = False
+            raise
 
-        return result
 
     def toggle_focus_mode(self):
         if self.focus:
@@ -120,7 +118,7 @@ class ScribberTextView(gtk.TextView):
             end = cursor.copy()
             end.forward_to_tag_toggle(tag_image)
 
-            image = start.get_text(end)
+            image_pattern = start.get_text(end)
 
             self.show_image_window('system-search.png')
         else:
@@ -447,14 +445,12 @@ class ScribberFadeHBox(gtk.Fixed):
     def add_header(self, widget):
         # To keep track of the widgets offset
         widget.offset = 0
-        #widget.set_parent(self)
         self.add(widget)
         self.fading_widgets['head'] = widget
 
     def add_footer(self, widget):
         # To keep track of the widgets offset
         widget.offset = 0
-        #widget.set_parent(self)
         self.add(widget)
         self.fading_widgets['foot'] = widget
 
@@ -501,9 +497,9 @@ class ScribberFadeHBox(gtk.Fixed):
                                 ScribberFadeHBox.UP)
 
             # TODO: gtk.main_iteration seems to block, though it shouldnt...
-#            while self.fading:
+            while self.fading:
 #                # While widgets are still fading out, continue in gtk.mainloop
-#                gtk.main_iteration(False)
+                gtk.main_iteration(False)
 
             for widget in self.fading_widgets.values():
                 widget.hide()
@@ -521,15 +517,6 @@ class ScribberFadeHBox(gtk.Fixed):
             gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
                                 self.__fadein_check_widget,
                                 ScribberFadeHBox.DOWN)
-
-    def __fadeout_check_widget(self, widget):
-        """ Returns True if the widget isn't fully faded out."""
-        x, y, width, height = widget.get_allocation()
-        return widget.offset < height
-
-    def __fadein_check_widget(self, widget):
-        """ Returns True if the widget isn't fully faded in."""
-        return widget.offset > 0
 
     def _fade(self, check_widget, offset):
         """ Fades the header and footer in the right direction. Returns True
@@ -555,3 +542,12 @@ class ScribberFadeHBox(gtk.Fixed):
             self.fading = False
 
         return modified_widget
+
+    def __fadeout_check_widget(self, widget):
+        """ Returns True if the widget isn't fully faded out."""
+        x, y, width, height = widget.get_allocation()
+        return widget.offset < height
+
+    def __fadein_check_widget(self, widget):
+        """ Returns True if the widget isn't fully faded in."""
+        return widget.offset > 0

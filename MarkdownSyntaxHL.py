@@ -42,7 +42,7 @@ PATTERNS = [
             Pattern('heading1', r"^(\# ).*$", flags=re.MULTILINE),
             # Setext headers
             Pattern('heading1', r"^(.).+?\n(=+)$", flags=re.MULTILINE),
-            Pattern('heading2', r"^(?![!\-*+])(.).+?\n(-+)$", 
+            Pattern('heading2', r"^(.).+?\n(-+)$", 
                     flags=re.MULTILINE),
 
             # tables
@@ -54,10 +54,11 @@ PATTERNS = [
             Pattern('image', r"(\!\(.*\)\[(.+)\])"),
 
             # basic inline formatting
-            Pattern('bolditalic', r"(\*\*\*[^s])", end=r"([^s]\*\*\*)"),
-            Pattern('bold', r"(?<!\*)(\*\*[^s])", end=r"([^s]\*\*)"),
-            Pattern('underlined', r"(_[^s])", end=r"([^s]_)"),
-            Pattern('italic', r"((?<!\*)\*[^\s])", end=r"([^\s]\*)")
+            # TODO \*** doesnt match as ** because ** must not be preceded by *
+            Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])", end=r"([^s\\]\*\*\*)"),
+            Pattern('bold', r"(?<!\*)(\*\*[^s])", end=r"([^s\\]\*\*)"),
+            Pattern('underlined', r"((?<!\\)_[^s])", end=r"([^s\\]_)"),
+            Pattern('italic', r"((?<!\*|\\)\*[^\s])", end=r"([^\s\\]\*)")
             ]
 
 

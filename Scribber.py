@@ -70,7 +70,6 @@ class ScribberView(object):
         self.buffer.connect("delete-range", self._on_buffer_changed)
 
         scrolled_window = gtk.ScrolledWindow()
-        #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
         scrolled_window.add(self.view)
 
@@ -83,19 +82,19 @@ class ScribberView(object):
         self.fix_find_replace = gtk.Fixed()
         self.fix_find_replace.add(self.find_replace_box)
 
-        vbox = gtk.VBox(False, 2)
+        main_vbox = gtk.VBox(False, 2)
         # Chill.. otherwise, fade_box calls on_size_allocate infinitly
-        vbox.set_resize_mode(gtk.RESIZE_QUEUE)
+        main_vbox.set_resize_mode(gtk.RESIZE_QUEUE)
 
         self.menu_bar = self.create_menu_bar()
         self.status_bar = self.create_status_bar()
 
-        vbox.pack_start(scrolled_window, True, True, 0)
-        vbox.pack_end(self.fix_find, False, False, 0)
-        vbox.pack_end(self.fix_find_replace, False, False, 0)
+        main_vbox.pack_start(scrolled_window, True, True, 0)
+        main_vbox.pack_end(self.fix_find, False, False, 0)
+        main_vbox.pack_end(self.fix_find_replace, False, False, 0)
 
         self.fade_box = ScribberFadeHBox()
-        self.fade_box.add_main_widget(vbox)
+        self.fade_box.add_main_widget(main_vbox)
         self.fade_box.add_header(self.menu_bar)
         self.fade_box.add_footer(self.status_bar)
 
