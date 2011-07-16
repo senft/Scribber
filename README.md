@@ -1,8 +1,7 @@
 #Scribber
 
-**Scribber** is a simple text editor that focuses on minimalism.
+**Scribber** is a simple text editor that focuses on minimalism. (Screenshot at the bottom)
 
-![](https://raw.github.com/senft/Scribber/master/screenshot1.png)
 
 # Features:
 
@@ -22,6 +21,9 @@
 * Optimize syntax hilighting (gets very slow on large texts)
 * Add some Markdown features (footnotes, ...)
 * Export to ODT
+
+# Screenshots:
+![](https://raw.github.com/senft/Scribber/master/screenshot1.png)
 
 
 Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
