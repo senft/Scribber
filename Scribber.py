@@ -17,9 +17,9 @@ import sys
 
 #from MarkdownExporter import ExportDialog
 from MarkdownExporter import MarkdownExporter
-from ScribberWidgets import (ScribberFadeHBox, ScribberFindBox,
-                             ScribberFindReplaceBox, ScribberTextBuffer,
-                             ScribberTextView)
+from MarkdownSyntaxHL import MarkdownSyntaxHL
+from Widgets import (ScribberFadeHBox, ScribberFindBox, ScribberFindReplaceBox,
+                     ScribberTextBuffer, ScribberTextView)
 
 
 __author__ = 'Julian Wulfheide'
@@ -40,6 +40,7 @@ class ScribberView(object):
         gtk.rc_parse(".gtkrc")
 
         self.buffer = ScribberTextBuffer()
+        self.syntax_hl = MarkdownSyntaxHL(self.buffer)
         self.view = ScribberTextView(self.win)
         self.view.set_buffer(self.buffer)
 
@@ -64,12 +65,11 @@ class ScribberView(object):
         self.buffer.connect('modified-changed',
             self._on_buffer_modified_change)
 
-        # To hide or show the bars
+        # To hide and show the bars
         self.buffer.connect("insert-text", self._on_buffer_changed)
         self.buffer.connect("delete-range", self._on_buffer_changed)
 
         scrolled_window = gtk.ScrolledWindow()
-        #scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled_window.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
         scrolled_window.add(self.view)
 
@@ -82,19 +82,19 @@ class ScribberView(object):
         self.fix_find_replace = gtk.Fixed()
         self.fix_find_replace.add(self.find_replace_box)
 
-        vbox = gtk.VBox(False, 2)
+        main_vbox = gtk.VBox(False, 2)
         # Chill.. otherwise, fade_box calls on_size_allocate infinitly
-        vbox.set_resize_mode(gtk.RESIZE_QUEUE)
+        main_vbox.set_resize_mode(gtk.RESIZE_QUEUE)
 
         self.menu_bar = self.create_menu_bar()
         self.status_bar = self.create_status_bar()
 
-        vbox.pack_start(scrolled_window, True, True, 0)
-        vbox.pack_end(self.fix_find, False, False, 0)
-        vbox.pack_end(self.fix_find_replace, False, False, 0)
+        main_vbox.pack_start(scrolled_window, True, True, 0)
+        main_vbox.pack_end(self.fix_find, False, False, 0)
+        main_vbox.pack_end(self.fix_find_replace, False, False, 0)
 
         self.fade_box = ScribberFadeHBox()
-        self.fade_box.add_main_widget(vbox)
+        self.fade_box.add_main_widget(main_vbox)
         self.fade_box.add_header(self.menu_bar)
         self.fade_box.add_footer(self.status_bar)
 
@@ -186,8 +186,9 @@ class ScribberView(object):
             response = self.show_ask_save_dialog()
 
         # If save-dialog has been canceled, cancel open, too
-        if not response == gtk.RESPONSE_CANCEL:
-            if filename is None:
+        if (not response == gtk.RESPONSE_CANCEL or 
+            not response == gtk.RESPONSE_DELETE_EVENT):
+            if not filename:
                 # No filename passed, so show a open-dialog
                 dialog = gtk.FileChooserDialog(parent=self.win,
                          title='Open...', action=gtk.FILE_CHOOSER_ACTION_OPEN,
@@ -202,11 +203,20 @@ class ScribberView(object):
 
             # Open-dialog might have been canceled, so check for
             # filename != None again
-            if filename is not None:
+            if filename:
                 # Finally open the file
-                self.view.open_file(filename)
-                self.win.set_title(''.join(['Scribber - ', filename]))
-                self.filename = filename
+                try:
+                    self.view.open_file(filename)
+                    self.win.set_title(''.join(['Scribber - ', filename]))
+                    self.filename = filename
+                except IOError as e:
+                    dialog = gtk.MessageDialog(parent=self.win,
+                                           message_format='Could not open file.',
+                                           buttons=gtk.BUTTONS_OK,
+                                           type=gtk.MESSAGE_ERROR)
+                    dialog.format_secondary_text(str(e))
+                    dialog.connect("response", lambda d, r: d.destroy())
+                    dialog.run()
 
     def delete(self):
         """ Deletes the currently selected text in out TextBuffer."""
