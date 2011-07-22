@@ -21,6 +21,8 @@
 * Optimize syntax hilighting (gets very slow on large texts)
 * Add some Markdown features (footnotes, ...)
 * Export to ODT
+* When hovering an image-code display the image in a tooltip
+* Implement a mechanis to quickly jump between headings. Maybe provide a overview of all headings and their hierachy
 
 # Screenshots:
 ![](https://raw.github.com/senft/Scribber/master/screenshot1.png)
