@@ -8,6 +8,12 @@ import mdx_latex
 
 
 class ExportDialog(gtk.Dialog):
+    """ TODO: Shows a dialog where one can specify how he wants to export.
+              This returns a dict containing the options.
+              e.g.
+                return {'article' : 1, 'encoding' : 'utf-8',
+                        size : 12pt, margins, ...  }
+    """
     def __init__(self):
         gtk.Dialog.__init__(self)
         print dir(self)

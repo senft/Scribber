@@ -44,7 +44,7 @@ class ScribberTextView(gtk.TextView):
         self.image_window.set_default_size(200, 200)
         self.image_window.add(self.image_image)
 
-        font = pango.FontDescription("Deja Vu Sans Mono  11")
+        font = pango.FontDescription("Deja Vu Sans 11")
         self.modify_font(font)
 
         # Wrap mode

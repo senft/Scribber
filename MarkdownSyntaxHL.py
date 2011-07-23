@@ -58,7 +58,8 @@ PATTERNS = [
             Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])", end=r"([^s\\]\*\*\*)"),
             Pattern('bold', r"(?<!\*)(\*\*[^s])", end=r"([^s\\]\*\*)"),
             Pattern('underlined', r"((?<!\\)_[^s])", end=r"([^s\\]_)"),
-            Pattern('italic', r"((?<!\*|\\)\*[^\s])", end=r"([^\s\\]\*)")
+            Pattern('italic', r"((?<!\*|\\)\*[^\s])", end=r"([^\s\\]\*)"),
+            Pattern('monospace', r"(`[^\s])", end=r"([^\s\\]`)"),
             ]
 
 
@@ -76,22 +77,22 @@ class MarkdownSyntaxHL(object):
         self.buffer.connect_after("delete-range", self._on_delete_range)
         self.buffer.connect('apply-tag', self._on_apply_tag)
 
-        self.tags['heading1'] = self.buffer.create_tag("heading1",
+        self.tags['heading1'] = self.buffer.create_tag('heading1',
             weight=pango.WEIGHT_BOLD, left_margin=30)
-        self.tags['heading2'] = self.buffer.create_tag("heading2",
+        self.tags['heading2'] = self.buffer.create_tag('heading2',
             weight=pango.WEIGHT_BOLD, left_margin=40)
-        self.tags['heading3'] = self.buffer.create_tag("heading3",
+        self.tags['heading3'] = self.buffer.create_tag('heading3',
             weight=pango.WEIGHT_BOLD, left_margin=50)
-        self.tags['heading4'] = self.buffer.create_tag("heading4",
+        self.tags['heading4'] = self.buffer.create_tag('heading4',
             weight=pango.WEIGHT_BOLD, left_margin=60)
-        self.tags['heading5'] = self.buffer.create_tag("heading5",
+        self.tags['heading5'] = self.buffer.create_tag('heading5',
             weight=pango.WEIGHT_BOLD, left_margin=70)
-        self.tags['heading6'] = self.buffer.create_tag("heading6",
+        self.tags['heading6'] = self.buffer.create_tag('heading6',
             weight=pango.WEIGHT_BOLD, left_margin=80)
 
-        self.tags['table_default'] = self.buffer.create_tag("table_default",
+        self.tags['table_default'] = self.buffer.create_tag('table_default',
             left_margin=110)
-        self.tags['table_sorted'] = self.buffer.create_tag("table_sorted",
+        self.tags['table_sorted'] = self.buffer.create_tag('table_sorted',
             left_margin=110)
 
         self.tags['blockquote'] = self.buffer.create_tag('blockquote',
@@ -100,14 +101,17 @@ class MarkdownSyntaxHL(object):
         self.tags['image'] = self.buffer.create_tag('image',
                          style=pango.STYLE_ITALIC)
 
-        self.tags['underlined'] = self.buffer.create_tag("underlined",
+        self.tags['underlined'] = self.buffer.create_tag('underlined',
                               underline=pango.UNDERLINE_SINGLE)
-        self.tags['bold'] = self.buffer.create_tag("bold",
+        self.tags['bold'] = self.buffer.create_tag('bold',
                         weight=pango.WEIGHT_BOLD)
-        self.tags['italic'] = self.buffer.create_tag("italic",
+        self.tags['italic'] = self.buffer.create_tag('italic',
                                  style=pango.STYLE_ITALIC)
-        self.tags['bolditalic'] = self.buffer.create_tag("bolditalic",
+        self.tags['bolditalic'] = self.buffer.create_tag('bolditalic',
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
+
+        self.tags['monospace'] = self.buffer.create_tag('monospace',
+                        family="monospace")
 
     def get_cursor_iter(self):
         """ Returns a gtk.TextIter pointing to the current cursor position."""
@@ -159,7 +163,7 @@ class MarkdownSyntaxHL(object):
                     # start or end already used?
                     if (match['start'].get_offset() in used_iters or
                         match['end'].get_offset() in used_iters):
-                        search_start.forward_chars(match['start_del'])
+                        search_start.forward_chars(match['start_delimit'])
                         continue
 
                     # TODO: We only need to save inline elements like bold,
@@ -171,13 +175,13 @@ class MarkdownSyntaxHL(object):
                         # to the end of the end delimiter, but we need the
                         # start. When | represents an iter, we have:
                         # **foobar**|, but we need **foobar|**
-                        if match['end_del']:
-                            new_end.backward_chars(match['end_del'] - 1)
+                        if match['end_delimit']:
+                            new_end.backward_chars(match['end_delimit'] - 1)
                         used_iters.add(new_end.get_offset())
 
                     # Continue next search behind this match
                     search_start = match['start'].copy()
-                    search_start.forward_chars(match['start_del'])
+                    search_start.forward_chars(match['start_delimit'])
 
                     yield match
 
@@ -226,8 +230,8 @@ class MarkdownSyntaxHL(object):
                 mend.forward_chars(result_start.end())
 
             return dict(tagn=pattern.tagn, start=mstart, end=mend,
-                        start_del=start_delimit_length,
-                        end_del=end_delimit_length)
+                        start_delimit=start_delimit_length,
+                        end_delimit=end_delimit_length)
         else:
             raise NoPatternFound("Pattern not found.")
 
