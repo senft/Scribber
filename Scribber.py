@@ -552,7 +552,8 @@ def new_instance():
     new = ScribberView()
     new.run()
 
-if __name__ == '__main__':
+
+def main(): 
     if len(sys.argv) > 1:
         # TODO Make some real arg parsing here
         INST = ScribberView()
@@ -561,3 +562,6 @@ if __name__ == '__main__':
         INST = ScribberView()
 
     INST.run()
+
+if __name__ == '__main__':
+    main()

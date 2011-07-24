@@ -22,11 +22,12 @@ class Pattern(object):
                  nested patterns, it can be the whole pattern.
         end -- if you want to match a specific end, independently from your
                start, define the pattern here
-        flags -- RE.flags for the patterns (seperator multiple flags with a '|'
+        flags -- RE.flags for the patterns (seperate multiple flags with a '|'
                  e.g. re.MULTILINE|re.IGNORECASE)
         """
         self.tagn = tagn
         self.start = re.compile(start, flags)
+        self.end = end
         if end:
             self.end = re.compile(end, flags)
         else:
@@ -154,7 +155,7 @@ class MarkdownSyntaxHL(object):
             # Begin at the start of the region to search for every pattern
             search_start = start.copy()
 
-            while True:
+            while 1:
                 try:
                     match = self._find_pattern(pattern,
                             text[search_start.get_offset():end.get_offset()],
