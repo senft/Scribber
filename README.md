@@ -21,7 +21,6 @@
 * Optimize syntax hilighting (gets very slow on large texts)
 * Add some Markdown features (footnotes, ...)
 * Export to ODT
-* Dismiss Pattern-Class for a NamedTupel
 
 # Screenshots:
 ![](https://raw.github.com/senft/Scribber/master/screenshot1.png)
