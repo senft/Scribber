@@ -261,7 +261,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         if not cursor.ends_sentence():
             mend.forward_sentence_end()
 
-        self.remove_tag_by_name("blurr_out", start, end)
+        self.remove_tag_by_name("blurr_out", mstart, mend)
         self.apply_tag_by_name("blurr_out", start, mstart)
         self.apply_tag_by_name("blurr_out", mend, end)
 
@@ -271,8 +271,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         """ Removes all highlighting tags from buffer."""
         start = self.get_start_iter()
         end = self.get_end_iter()
-        self.remove_tag_by_name("default", start, end)
-        self.apply_tag_by_name("focus", start, end)
+        self.remove_tag_by_name("blurr_out", start, end)
 
 
 class ScribberFindBox(gtk.HBox):
@@ -494,13 +493,15 @@ class ScribberFadeHBox(gtk.Fixed):
                                 self.__fadeout_check_widget,
                                 ScribberFadeHBox.UP)
 
-            # TODO: gtk.main_iteration seems to block, though it shouldnt...
-            while self.fading:
-#                # While widgets are still fading out, continue in gtk.mainloop
-                gtk.main_iteration(False)
-
+            # TODO The hiding should actually happen _after_ the fading, but
+            # it doesnt work as expected
             for widget in self.fading_widgets.values():
                 widget.hide()
+
+            # TODO: gtk.main_iteration seems to block, though it shouldnt...
+#            while self.fading:
+#                # While widgets are still fading out, continue in gtk.mainloop
+#                gtk.main_iteration(False)
 
     def fadein(self):
         """ Checks if we are currently fading in or out, if not, starts a timer
