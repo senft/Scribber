@@ -271,8 +271,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         """ Removes all highlighting tags from buffer."""
         start = self.get_start_iter()
         end = self.get_end_iter()
-        self.remove_tag_by_name("default", start, end)
-        self.apply_tag_by_name("focus", start, end)
+        self.remove_tag_by_name("blurr_out", start, end)
 
 
 class ScribberFindBox(gtk.HBox):
