@@ -49,7 +49,7 @@ class ScribberTextView(gtk.TextView):
 
         # Wrap mode
         self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
-
+        
         # Paragraph spacing
         self.set_pixels_above_lines(3)
         self.set_pixels_below_lines(3)
@@ -107,24 +107,34 @@ class ScribberTextView(gtk.TextView):
         self.toggle_image_window()
 
     def toggle_image_window(self):
+        """ Checks if current cursor position is an image. If so, it displays a
+        preview of that image.""" 
+
         tag_image = self.get_buffer().tags['image']
+        #pattern_image = self.get_buffer().
         cursor = self.get_buffer().get_cursor_iter()
         if cursor.has_tag(tag_image):
-            # TODO: Parse the filename correctly
+            # Parse the filename
             start = cursor.copy()
-            start.backward_to_tag_toggle(tag_image)
+            if not cursor.begins_tag(tag_image):
+                start.backward_to_tag_toggle(tag_image)
+
             end = cursor.copy()
-            end.forward_to_tag_toggle(tag_image)
+            if not cursor.ends_tag(tag_image):
+                end.forward_to_tag_toggle(tag_image)
 
             image_pattern = start.get_text(end)
+            print image_pattern
 
             self.show_image_window('system-search.png')
         else:
-            self.hide_image_window()
+            self.image_window.hide()
 
     def show_image_window(self, image):
-        if not self.image_window.get_visible():
+        """ Determines the current cursor position on the screen (x,y) and
+        displays the image preview."""
 
+        if not self.image_window.get_visible():
             self.image_image.set_from_file(image)
 
             window_x, window_y = self.parent_window.get_position()
@@ -136,9 +146,6 @@ class ScribberTextView(gtk.TextView):
             self.image_window.move(x + width + window_x + self_x,
                                    y + height + window_y + self_y)
             self.image_window.show_all()
-
-    def hide_image_window(self):
-        self.image_window.hide()
 
 
 class ScribberTextBuffer(gtk.TextBuffer):

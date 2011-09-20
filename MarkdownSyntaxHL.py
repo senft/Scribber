@@ -56,7 +56,8 @@ PATTERNS = [
 
             # basic inline formatting
             # TODO \*** doesnt match as ** because ** must not be preceded by *
-            Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])", end=r"([^s\\]\*\*\*)"),
+            Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])",
+                     end=r"([^s\\]\*\*\*)"),
             Pattern('bold', r"(?<!\*)(\*\*[^s])", end=r"([^s\\]\*\*)"),
             Pattern('underlined', r"((?<!\\)_[^s])", end=r"([^s\\]_)"),
             Pattern('italic', r"((?<!\*|\\)\*[^\s])", end=r"([^\s\\]\*)"),
