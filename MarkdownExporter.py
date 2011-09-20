@@ -6,6 +6,32 @@ import subprocess
 import markdown
 import mdx_latex
 
+TEX_HEADER = r"""\documentclass[a4paper, 12pt, oneside, german]{scrreprt}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[ngerman]{babel}
+\usepackage[left=3cm, right=3cm, top=3cm, bottom=3cm, includehead]{geometry}
+
+\usepackage{listings, setspace, graphicx, color, hyperref, fancyhdr, amsmath,
+            tabularx, dsfont, amsthm}
+
+\setkomafont{disposition}{\normalcolor\bfseries}
+
+\pagestyle{headings}
+
+%Kopf- und Fußzeile
+\pagestyle{fancy}
+\fancyhf{}
+\headheight 15pt
+
+%Kopfzeile rechts oben mit Kapitelname in Kapitälchen
+\fancyhead[R]{\textsc{\nouppercase{\leftmark}}}
+
+%Fußzeile rechts mit Seitenzahl
+\fancyfoot[R]{\thepage}
+\begin{document}
+"""
+
 
 class ExportDialog(gtk.Dialog):
     """ TODO: Shows a dialog where one can specify how he wants to export.
@@ -40,17 +66,10 @@ class MarkdownExporter(object):
         out = out[6:-7]
 
         # Add some headers and packages
-        document = ["""
-\\documentclass[german]{article}
-\\usepackage[utf8]{inputenc}
-\\usepackage[T1]{fontenc}
-\\usepackage[ngerman]{babel}
-\\usepackage{graphicx}
-\\begin{document}""", out,
-            '\end{document}']
+        document = [TEX_HEADER, out, '\end{document}']
 
         out = ''.join(document)
-        print out
+        #print out
 
         return self._write_to_file(out, ''.join([filename, '.tex']))
 

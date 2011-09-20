@@ -168,12 +168,7 @@ class LaTeXTreeProcessor(markdown.treeprocessors.Treeprocessor):
                 subcontent += self.tolatex(child)
 
         if ournode.tag == 'h1':
-            buffer += '\n\\title{%s}\n' % subcontent
-            buffer += """
-% ----------------------------------------------------------------
-\maketitle
-% ----------------------------------------------------------------
-"""
+            buffer += '\n\\chapter{%s}\n' % subcontent
         elif ournode.tag == 'h2':
             buffer += '\n\n\\section{%s}\n' % subcontent
         elif ournode.tag == 'h3':
