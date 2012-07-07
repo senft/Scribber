@@ -87,6 +87,8 @@ class MarkdownSyntaxHL(object):
     def __init__(self, buf):
         self.buffer = buf
 
+        if not hasattr(buf, 'tags'):
+            buf.tags = {}
         self.tags = buf.tags
 
         self.buffer.connect_after('insert-text', self._on_insert_text)
@@ -170,10 +172,10 @@ class MarkdownSyntaxHL(object):
         for tagn, pattern in PATTERNS.items():
             # Save which positions we already used as an end or a start of a
             # pattern, so we dont use positions we already used as and end,
-            # as the start of another match(e.g. in 'fo*ob*ar' both asteriks
+            # as the start of another match (e.g. in 'fo*ob*ar' both asteriks
             # can be seen as the start and the end of a pattern. So we have
             # to remember that we already used the second asterik as the end
-            # of a pattern.
+            # of the pattern *ob* and dont try to match *ar..*
             used_iters = set()
 
             # Begin at the start of the region to search for every pattern

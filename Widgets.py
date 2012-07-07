@@ -280,7 +280,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         if not cursor.ends_sentence():
             mend.forward_sentence_end()
 
-        self.remove_tag_by_name("blurr_out", start, end)
+        self.remove_tag_by_name("blurr_out", mstart, mend)
         self.apply_tag_by_name("blurr_out", start, mstart)
         self.apply_tag_by_name("blurr_out", mend, end)
 
@@ -520,6 +520,11 @@ class ScribberFadeHBox(gtk.Fixed):
 
             for widget in self.fading_widgets.values():
                 widget.hide()
+
+            # TODO: gtk.main_iteration seems to block, though it shouldnt...
+#            while self.fading:
+#                # While widgets are still fading out, continue in gtk.mainloop
+#                gtk.main_iteration(False)
 
     def fadein(self):
         # TODO: Make sure this is called
