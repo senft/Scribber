@@ -13,6 +13,8 @@ Custom widgets used in Scribber.
     * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
 """
 
+from thread import start_new_thread
+
 import collections
 import gobject
 import gtk
@@ -30,11 +32,14 @@ class ScribberTextView(gtk.TextView):
 
         self.parent_window = parent_window
 
+        self.edit_region_width = 794
+
         self.connect_after('key-press-event', self._on_key_event)
         self.connect('key-release-event', self._on_key_event)
         self.connect_after('button-press-event', self._on_button_event)
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
+        self.connect('size-allocate', self._on_size_allocate)
 
         self.set_accepts_tab(True)
 
@@ -49,7 +54,8 @@ class ScribberTextView(gtk.TextView):
 
         # Wrap mode
         self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
-        
+        #self.set_wrap_mode(gtk.WRAP_WORD)
+
         # Paragraph spacing
         self.set_pixels_above_lines(3)
         self.set_pixels_below_lines(3)
@@ -73,7 +79,6 @@ class ScribberTextView(gtk.TextView):
             self.get_buffer().set_modified(False)
         except IOError:
             raise
-
 
     def toggle_focus_mode(self):
         if self.focus:
@@ -106,12 +111,19 @@ class ScribberTextView(gtk.TextView):
         self.focus_current_sentence()
         self.toggle_image_window()
 
+    def _on_size_allocate(self, widget, event, data=None):
+        x, y, width, height = self.get_allocation()
+        if width > self.edit_region_width:
+            margin = (width - self.edit_region_width) / 2
+            self.set_left_margin(margin)
+            self.set_right_margin(margin)
+
     def toggle_image_window(self):
         """ Checks if current cursor position is an image. If so, it displays a
-        preview of that image.""" 
+        preview of that image."""
 
         tag_image = self.get_buffer().tags['image']
-        #pattern_image = self.get_buffer().
+        #pattern_image = MarkdownSyntaxHL.PATTERNS['image']
         cursor = self.get_buffer().get_cursor_iter()
         if cursor.has_tag(tag_image):
             # Parse the filename
@@ -256,7 +268,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self._apply_tags = True
 
-        cursor= self.get_iter_at_mark(self.get_insert())
+        cursor = self.get_iter_at_mark(self.get_insert())
 
         start = self.get_start_iter()
         end = self.get_end_iter()
@@ -459,7 +471,6 @@ class ScribberFadeHBox(gtk.Fixed):
         self.fading_widgets['foot'] = widget
 
     def add_main_widget(self, widget):
-        #widget.set_parent(self)
         self.main = widget
         self.add(self.main)
 
@@ -488,7 +499,10 @@ class ScribberFadeHBox(gtk.Fixed):
         self._resize_children()
 
     def fadeout(self):
-        """ Checks if we are currently fading in or out, if not, starts a timer
+        start_new_thread(self._fadeout, ())
+
+    def _fadeout(self):
+        """ Checks if we are currently fading, if not, starts a timer
             that calls a fadeout function until the widgets are completely
             faded out.
         """
@@ -500,27 +514,29 @@ class ScribberFadeHBox(gtk.Fixed):
                                 self.__fadeout_check_widget,
                                 ScribberFadeHBox.UP)
 
-            # TODO: gtk.main_iteration seems to block, though it shouldnt...
             while self.fading:
-#                # While widgets are still fading out, continue in gtk.mainloop
+                # While widgets are still fading out, continue in gtk.mainloop
                 gtk.main_iteration(False)
 
             for widget in self.fading_widgets.values():
                 widget.hide()
 
     def fadein(self):
-        """ Checks if we are currently fading in or out, if not, starts a timer
+        # TODO: Make sure this is called
+        if not self.fading_widgets['head'].get_visible() and not self.fading:
+            self.fading = True
+            start_new_thread(self._fadein, ())
+
+    def _fadein(self):
+        """ Checks if we are currently fading, if not, starts a timer
             that calls a fadein function until the widgets are completely
             faded in.
         """
-        # Make sure we only call this once
-        if not self.fading_widgets['head'].get_visible() and not self.fading:
-            self.fading = True
-            for widget in self.fading_widgets.values():
-                widget.show()
-            gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
-                                self.__fadein_check_widget,
-                                ScribberFadeHBox.DOWN)
+        for widget in self.fading_widgets.values():
+            widget.show()
+        gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
+                            self.__fadein_check_widget,
+                            ScribberFadeHBox.DOWN)
 
     def _fade(self, check_widget, offset):
         """ Fades the header and footer in the right direction. Returns True

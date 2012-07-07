@@ -12,11 +12,8 @@ Some icons provided by the Tango Desktop Project
 import gtk
 import pygtk
 pygtk.require('2.0')
-import os
 import sys
 
-#from MarkdownExporter import ExportDialog
-from MarkdownExporter import MarkdownExporter
 from MarkdownSyntaxHL import MarkdownSyntaxHL
 from Widgets import (ScribberFadeHBox, ScribberFindBox, ScribberFindReplaceBox,
                      ScribberTextBuffer, ScribberTextView)
@@ -35,6 +32,7 @@ __status__ = 'Development'
 class ScribberView(object):
     def __init__(self):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
+        self.win.set_title('Untitled - Scribber')
 
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
@@ -49,9 +47,7 @@ class ScribberView(object):
         self.is_fullscreen = False
 
         self.filename = None
-        self.exporter = MarkdownExporter()
 
-        self.win.set_title("Scribber - Untitled")
         self.win.set_destroy_with_parent(False)
 
         # Callbacks
@@ -99,10 +95,10 @@ class ScribberView(object):
         self.fade_box.add_footer(self.status_bar)
 
         self.win.add(self.fade_box)
+        self.win.resize(600, 600)
 
     def run(self):
         """ Show Scribber instance. """
-        # Go!
         self.win.show_all()
         self.fix_find.hide()
         self.fix_find_replace.hide()
@@ -115,16 +111,20 @@ class ScribberView(object):
                 self.buffer.set_modified(False)
         else:
             # Filename is know
-            result = self.exporter.to_plain_text(
-                self.buffer.get_start_iter().get_text(
-                self.buffer.get_end_iter()),
-                self.filename)
+            text = self.buffer.get_start_iter().get_text(
+            self.buffer.get_end_iter())
+            try:
+                with open(self.filename, 'w+') as f:
+                    f.write(text)
+            except IOError:
+                # TODO: DO SOMETHING!
+                pass
 
-            if result:
-                self.buffer.set_modified(False)
+        # Not if IOError was raised
+        self.buffer.set_modified(False)
 
         # If we saved in one of the branches above, get_modified should be
-        # to false now -> save() was successfull
+        # false now,so the save was successfull
         return not self.buffer.get_modified()
 
     def save_as(self):
@@ -144,40 +144,6 @@ class ScribberView(object):
 
         dialog.destroy()
         return success
-
-    def export(self):
-        #exportdialog = ExportDialog()
-        #exportdialog.show()
-
-        filedialog = gtk.FileChooserDialog(parent=self.win, title='Export...',
-                     action=gtk.FILE_CHOOSER_ACTION_SAVE,
-                     buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                     gtk.STOCK_SAVE, gtk.RESPONSE_OK))
-
-        filter_pdf = gtk.FileFilter()
-        filter_pdf.set_name('PDF-Document')
-        filter_pdf.add_pattern('*.pdf')
-        filedialog.add_filter(filter_pdf)
-
-        filter_odt = gtk.FileFilter()
-        filter_odt.set_name('Open-Office-Document')
-        filter_odt.add_pattern('*.odt')
-        filedialog.add_filter(filter_odt)
-
-        response = filedialog.run()
-
-        if response == gtk.RESPONSE_OK:
-            filename = filedialog.get_filename()
-            filepath, ext = os.path.splitext(filename)
-
-            if filedialog.get_filter().get_name() == 'PDF-Document':
-                # TODO Ugly text retreavel
-                self.exporter.to_pdf(self.buffer.get_start_iter().get_text(
-                                     self.buffer.get_end_iter()), filepath)
-            elif filedialog.get_filter().get_name() == 'Open-Office-Document':
-                self.exporter.to_odt(filepath)
-
-        filedialog.destroy()
 
     def open(self, filename=None):
         response = None
@@ -207,13 +173,13 @@ class ScribberView(object):
                 # Finally open the file
                 try:
                     self.view.open_file(filename)
-                    self.win.set_title(''.join(['Scribber - ', filename]))
                     self.filename = filename
+                    self.set_window_title()
                 except IOError as e:
                     dialog = gtk.MessageDialog(parent=self.win,
-                                           message_format='Could not open file.',
-                                           buttons=gtk.BUTTONS_OK,
-                                           type=gtk.MESSAGE_ERROR)
+                                        message_format='Could not open file.',
+                                        buttons=gtk.BUTTONS_OK,
+                                        type=gtk.MESSAGE_ERROR)
                     dialog.format_secondary_text(str(e))
                     dialog.connect("response", lambda d, r: d.destroy())
                     dialog.run()
@@ -421,7 +387,7 @@ class ScribberView(object):
         self.menu_actions[newm] = new_instance
         self.menu_actions[savem] = self.save
         self.menu_actions[saveasm] = self.save_as
-        self.menu_actions[exportm] = self.export
+        self.menu_actions[exportm] = None
         self.menu_actions[openm] = self.open
         self.menu_actions[quitm] = new_instance
 
@@ -444,13 +410,13 @@ class ScribberView(object):
         # Buttons
         button_focus = gtk.ToggleButton("Focus")
         button_focus.set_image(
-            gtk.image_new_from_file("system-search.png"))
+            gtk.image_new_from_file("icons/system-search.png"))
         button_focus.set_active(True)
         button_focus.connect("clicked", self._on_button_click)
 
         self.button_fullscreen = gtk.ToggleButton("Fullscreen")
         self.button_fullscreen.set_image(
-           gtk.image_new_from_file("view-fullscreen.png"))
+           gtk.image_new_from_file("icons/view-fullscreen.png"))
         self.button_fullscreen.connect("clicked", self._on_button_click)
 
         self.button_actions = {}
@@ -485,6 +451,17 @@ class ScribberView(object):
         # Focus TextView
         self.win.set_focus(self.view)
 
+    def set_window_title(self):
+        if self.filename:
+            filename = self.filename
+        else:
+            filename = 'Untitled'
+
+        if self.buffer.get_modified():
+            self.win.set_title(filename + '*' + ' - Scribber')
+        else:
+            self.win.set_title(filename + ' - Scribber')
+
     def _on_menu_click(self, widget, data=None):
         """ Called when clicked on a menu item. """
         if widget in self.menu_actions:
@@ -502,23 +479,14 @@ class ScribberView(object):
 
     def _on_buffer_changed(self, buffer, iter, text, length=None):
         self.fade_box.fadeout()
-        #self.win.set_decorated(False)
+
+        self.win.set_decorated(True)
 
     def _on_buffer_modified_change(self, widget, data=None):
         """ Called when the TextBuffer of our TextView gets modified.
             Only used to set the right window title (* when Buffer is
             modified)."""
-        if self.filename:
-            filename = self.filename
-        else:
-            filename = 'Untitled'
-
-        if self.buffer.get_modified():
-            if not self.win.get_title().endswith('*'):
-                self.win.set_title('Scribber - ' + filename + '*')
-        else:
-            if self.win.get_title().endswith('*'):
-                self.win.set_title('Scribber - ' + filename)
+        self.set_window_title()
 
     def _on_window_state_event(self, widget, event, data=None):
         """ Called when the window state changes (e.g.
