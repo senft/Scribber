@@ -34,8 +34,8 @@ class ScribberTextView(gtk.TextView):
 
         self.edit_region_width = 794
 
-        self.connect_after('key-press-event', self._on_key_event)
-        self.connect('key-release-event', self._on_key_event)
+        self.connect_after('key-press-event', self._on_key_pressed)
+        self.connect('key-release-event', self._on_key_released)
         self.connect_after('button-press-event', self._on_button_event)
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
@@ -53,15 +53,12 @@ class ScribberTextView(gtk.TextView):
         self.modify_font(font)
 
         # Wrap mode
-        self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
-        #self.set_wrap_mode(gtk.WRAP_WORD)
+        #self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
+        self.set_wrap_mode(gtk.WRAP_WORD)
 
         # Paragraph spacing
         self.set_pixels_above_lines(3)
         self.set_pixels_below_lines(3)
-
-        self.set_right_margin(80)
-        self.set_left_margin(80)
 
         # Line spacing
         self.set_pixels_inside_wrap(5)
@@ -90,28 +87,51 @@ class ScribberTextView(gtk.TextView):
 
     def focus_current_sentence(self):
         """ Highlights the current sentence and scroll it to the middle of
-            the gtkTextView.
-        """
+            the gtkTextView. """
         if self.focus:
             self.get_buffer().focus_current_sentence()
+
+            # TODO The scrolling is really obtrusive because it is so hard,
+            # this can only work, if the scrolling was smooth.
+
             # Scroll cursor to middle of TextView
-            self.scroll_to_mark(self.get_buffer().get_insert(), 0.0, True,
-                0.0, 0.5)
+            #self.scroll_to_mark(self.get_buffer().get_insert(), 0.0, True,
+            #    0.0, 0.5)
+
+    def _on_key_pressed(self, widget, event, data=None):
+        keyname = gtk.gdk.keyval_name(event.keyval)
+        state = event.state
+
+        if state == gtk.gdk.CONTROL_MASK:  # CTRL
+            if keyname == 'd':
+                print 'DELETE ROW'
+        elif state == gtk.gdk.MOD1_MASK:  # Alt
+            if keyname == 'Up':
+                self.move_line_up()
+            elif keyname == 'Down':
+                print 'Move line down'
+
+        self.focus_current_sentence()
+        self.toggle_image_window()
+
+    def _on_key_released(self, widget, event, data=None):
+        self.focus_current_sentence()
+        self.toggle_image_window()
 
     def _on_move_cursor(self, widget, step_size, count, extend_selection,
                         data=None):
         self.focus_current_sentence()
         self.toggle_image_window()
 
-    def _on_key_event(self, widget, event, data=None):
-        self.focus_current_sentence()
-        self.toggle_image_window()
-
     def _on_button_event(self, widget, event, data=None):
+        """ Called on mouse click. """
         self.focus_current_sentence()
         self.toggle_image_window()
 
     def _on_size_allocate(self, widget, event, data=None):
+        """ Called when widget gets resized. This modifies the left/right
+        margin so that we have a fixed line width. """
+
         x, y, width, height = self.get_allocation()
         if width > self.edit_region_width:
             margin = (width - self.edit_region_width) / 2
@@ -158,6 +178,18 @@ class ScribberTextView(gtk.TextView):
             self.image_window.move(x + width + window_x + self_x,
                                    y + height + window_y + self_y)
             self.image_window.show_all()
+
+    def move_line_up(self):
+        buffer = self.get_buffer()
+        end = buffer.get_cursor_iter()
+
+        self.emit('move-cursor', gtk.MOVEMENT_DISPLAY_LINE_ENDS, -1, False)
+        # cursor on start of line now
+        cursor = buffer.get_iter_at_mark(buffer.get_insert())
+
+        # TODO: end goes too far
+        end.forward_line()
+        buffer.select_range(cursor, end)
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
