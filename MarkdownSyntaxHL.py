@@ -22,44 +22,61 @@ class Pattern(object):
                  nested patterns, it can be the whole pattern.
         end -- if you want to match a specific end, independently from your
                start, define the pattern here
-        flags -- RE.flags for the patterns (seperator multiple flags with a '|'
+        flags -- RE.flags for the patterns (seperate multiple flags with a '|'
                  e.g. re.MULTILINE|re.IGNORECASE)
         """
         self.tagn = tagn
         self.start = re.compile(start, flags)
+        self.end = end
         if end:
             self.end = re.compile(end, flags)
         else:
             self.end = None
 
-PATTERNS = [
+PATTERNS = {
             # atx headers
-            Pattern('heading6', r"^(\#{6} ).*$", flags=re.MULTILINE),
-            Pattern('heading5', r"^(\#{5} ).*$", flags=re.MULTILINE),
-            Pattern('heading4', r"^(\#{4} ).*$", flags=re.MULTILINE),
-            Pattern('heading3', r"^(\#{3} ).*$", flags=re.MULTILINE),
-            Pattern('heading2', r"^(\#\# ).*$", flags=re.MULTILINE),
-            Pattern('heading1', r"^(\# ).*$", flags=re.MULTILINE),
+            'heading6_atx': Pattern('heading6', r"^(\#{6} ).*$",
+                flags=re.MULTILINE),
+            'heading5_atx': Pattern('heading5', r"^(\#{5} ).*$",
+                flags=re.MULTILINE),
+            'heading4_atx': Pattern('heading4', r"^(\#{4} ).*$",
+                flags=re.MULTILINE),
+            'heading3_atx': Pattern('heading3', r"^(\#{3} ).*$",
+                flags=re.MULTILINE),
+            'heading2_atx': Pattern('heading2', r"^(\#\# ).*$",
+                flags=re.MULTILINE),
+            'heading1_atx': Pattern('heading1', r"^(\# ).*$",
+                flags=re.MULTILINE),
             # Setext headers
-            Pattern('heading1', r"^(.).+?\n(=+)$", flags=re.MULTILINE),
-            Pattern('heading2', r"^(.).+?\n(-+)$", 
+            'heading1_set': Pattern('heading1', r"^(.).+?\n(=+)$",
+                flags=re.MULTILINE),
+            'heading2_set': Pattern('heading2', r"^(.).+?\n(-+)$",
                     flags=re.MULTILINE),
 
             # tables
-            Pattern('table_default', r"^([+\-*] ).*?$", flags=re.MULTILINE),
-            Pattern('table_sorted', r"^(\d+\. ).*?$", flags=re.MULTILINE),
+            'table_default': Pattern('table_default', r"^([+\-*] ).*?$",
+                flags=re.MULTILINE),
+            'table_sorted': Pattern('table_sorted', r"^(\d+\. ).*?$",
+                flags=re.MULTILINE),
 
-            Pattern('blockquote', r"^(> ).+?$", flags=re.MULTILINE),
+            'blockquote': Pattern('blockquote', r"^(> ).+?$",
+                flags=re.MULTILINE),
 
-            Pattern('image', r"(\!\(.*\)\[(.+)\])"),
+            'image': Pattern('image', r"(\!\(.*\)\[(.+)\])"),
 
             # basic inline formatting
             # TODO \*** doesnt match as ** because ** must not be preceded by *
-            Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])", end=r"([^s\\]\*\*\*)"),
-            Pattern('bold', r"(?<!\*)(\*\*[^s])", end=r"([^s\\]\*\*)"),
-            Pattern('underlined', r"((?<!\\)_[^s])", end=r"([^s\\]_)"),
-            Pattern('italic', r"((?<!\*|\\)\*[^\s])", end=r"([^\s\\]\*)")
-            ]
+            'bolditalic': Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])",
+                     end=r"([^s\\]\*\*\*)"),
+            'bold': Pattern('bold', r"(?<!\*)(\*\*[^s])",
+                end=r"([^s\\]\*\*)"),
+            'underlined': Pattern('underlined', r"((?<!\\)_[^s])",
+                end=r"([^s\\]_)"),
+            'italic': Pattern('italic', r"((?<!\*|\\)\*[^\s])",
+                end=r"([^\s\\]\*)"),
+            'monospace': Pattern('monospace', r"(`[^\s])",
+                end=r"([^\s\\]`)"),
+            }
 
 
 class MarkdownSyntaxHL(object):
@@ -70,44 +87,58 @@ class MarkdownSyntaxHL(object):
     def __init__(self, buf):
         self.buffer = buf
 
+        if not hasattr(buf, 'tags'):
+            buf.tags = {}
         self.tags = buf.tags
 
-        self.buffer.connect_after("insert-text", self._on_insert_text)
-        self.buffer.connect_after("delete-range", self._on_delete_range)
+        self.buffer.connect_after('insert-text', self._on_insert_text)
+        self.buffer.connect_after('delete-range', self._on_delete_range)
         self.buffer.connect('apply-tag', self._on_apply_tag)
 
-        self.tags['heading1'] = self.buffer.create_tag("heading1",
-            weight=pango.WEIGHT_BOLD, left_margin=30)
-        self.tags['heading2'] = self.buffer.create_tag("heading2",
-            weight=pango.WEIGHT_BOLD, left_margin=40)
-        self.tags['heading3'] = self.buffer.create_tag("heading3",
-            weight=pango.WEIGHT_BOLD, left_margin=50)
-        self.tags['heading4'] = self.buffer.create_tag("heading4",
-            weight=pango.WEIGHT_BOLD, left_margin=60)
-        self.tags['heading5'] = self.buffer.create_tag("heading5",
-            weight=pango.WEIGHT_BOLD, left_margin=70)
-        self.tags['heading6'] = self.buffer.create_tag("heading6",
-            weight=pango.WEIGHT_BOLD, left_margin=80)
+        # TODO: I might have to completely ditch, the margin for headings
+        # (because It's just easier to only have accumulating margins)
+        self.tags['heading1'] = self.buffer.create_tag('heading1',
+            weight=pango.WEIGHT_BOLD, left_margin=-30,
+            accumulative_margin=True)
+        self.tags['heading2'] = self.buffer.create_tag('heading2',
+            weight=pango.WEIGHT_BOLD, left_margin=-40,
+            accumulative_margin=True)
+        self.tags['heading3'] = self.buffer.create_tag('heading3',
+            weight=pango.WEIGHT_BOLD, left_margin=-50,
+            accumulative_margin=True)
+        self.tags['heading4'] = self.buffer.create_tag('heading4',
+            weight=pango.WEIGHT_BOLD, left_margin=-60,
+            accumulative_margin=True)
+        self.tags['heading5'] = self.buffer.create_tag('heading5',
+            weight=pango.WEIGHT_BOLD, left_margin=-70,
+            accumulative_margin=True)
+        self.tags['heading6'] = self.buffer.create_tag('heading6',
+            weight=pango.WEIGHT_BOLD, left_margin=-80,
+            accumulative_margin=True)
 
-        self.tags['table_default'] = self.buffer.create_tag("table_default",
-            left_margin=110)
-        self.tags['table_sorted'] = self.buffer.create_tag("table_sorted",
-            left_margin=110)
+        self.tags['table_default'] = self.buffer.create_tag('table_default',
+            left_margin=30, accumulative_margin=True)
+        self.tags['table_sorted'] = self.buffer.create_tag('table_sorted',
+            left_margin=30, accumulative_margin=True)
 
         self.tags['blockquote'] = self.buffer.create_tag('blockquote',
-                              left_margin=110, style=pango.STYLE_ITALIC)
+                              left_margin=30, accumulative_margin=True,
+                              style=pango.STYLE_ITALIC)
 
         self.tags['image'] = self.buffer.create_tag('image',
                          style=pango.STYLE_ITALIC)
 
-        self.tags['underlined'] = self.buffer.create_tag("underlined",
+        self.tags['underlined'] = self.buffer.create_tag('underlined',
                               underline=pango.UNDERLINE_SINGLE)
-        self.tags['bold'] = self.buffer.create_tag("bold",
+        self.tags['bold'] = self.buffer.create_tag('bold',
                         weight=pango.WEIGHT_BOLD)
-        self.tags['italic'] = self.buffer.create_tag("italic",
+        self.tags['italic'] = self.buffer.create_tag('italic',
                                  style=pango.STYLE_ITALIC)
-        self.tags['bolditalic'] = self.buffer.create_tag("bolditalic",
+        self.tags['bolditalic'] = self.buffer.create_tag('bolditalic',
             weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
+
+        self.tags['monospace'] = self.buffer.create_tag('monospace',
+                        family="monospace")
 
     def get_cursor_iter(self):
         """ Returns a gtk.TextIter pointing to the current cursor position."""
@@ -124,7 +155,7 @@ class MarkdownSyntaxHL(object):
             end = self.buffer.get_end_iter()
 
         # Only remove markdown tags (no focus tags)
-        for pattern in PATTERNS:
+        for tagn, pattern in PATTERNS.items():
             self.buffer.remove_tag_by_name(pattern.tagn, start, end)
 
         for pattern in self._get_markdown_patterns(start, end):
@@ -138,19 +169,19 @@ class MarkdownSyntaxHL(object):
         # slices of this text, so we dont have to call iter.get_text() over and
         # over.
         text = start.get_text(end)
-        for pattern in PATTERNS:
+        for tagn, pattern in PATTERNS.items():
             # Save which positions we already used as an end or a start of a
             # pattern, so we dont use positions we already used as and end,
-            # as the start of another match(e.g. in 'fo*ob*ar' both asteriks
+            # as the start of another match (e.g. in 'fo*ob*ar' both asteriks
             # can be seen as the start and the end of a pattern. So we have
             # to remember that we already used the second asterik as the end
-            # of a pattern.
+            # of the pattern *ob* and dont try to match *ar..*
             used_iters = set()
 
             # Begin at the start of the region to search for every pattern
             search_start = start.copy()
 
-            while True:
+            while 1:
                 try:
                     match = self._find_pattern(pattern,
                             text[search_start.get_offset():end.get_offset()],
@@ -159,7 +190,7 @@ class MarkdownSyntaxHL(object):
                     # start or end already used?
                     if (match['start'].get_offset() in used_iters or
                         match['end'].get_offset() in used_iters):
-                        search_start.forward_chars(match['start_del'])
+                        search_start.forward_chars(match['start_delimit'])
                         continue
 
                     # TODO: We only need to save inline elements like bold,
@@ -171,13 +202,13 @@ class MarkdownSyntaxHL(object):
                         # to the end of the end delimiter, but we need the
                         # start. When | represents an iter, we have:
                         # **foobar**|, but we need **foobar|**
-                        if match['end_del']:
-                            new_end.backward_chars(match['end_del'] - 1)
+                        if match['end_delimit']:
+                            new_end.backward_chars(match['end_delimit'] - 1)
                         used_iters.add(new_end.get_offset())
 
                     # Continue next search behind this match
                     search_start = match['start'].copy()
-                    search_start.forward_chars(match['start_del'])
+                    search_start.forward_chars(match['start_delimit'])
 
                     yield match
 
@@ -226,8 +257,8 @@ class MarkdownSyntaxHL(object):
                 mend.forward_chars(result_start.end())
 
             return dict(tagn=pattern.tagn, start=mstart, end=mend,
-                        start_del=start_delimit_length,
-                        end_del=end_delimit_length)
+                        start_delimit=start_delimit_length,
+                        end_delimit=end_delimit_length)
         else:
             raise NoPatternFound("Pattern not found.")
 

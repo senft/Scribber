@@ -13,6 +13,8 @@ Custom widgets used in Scribber.
     * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
 """
 
+from thread import start_new_thread
+
 import collections
 import gobject
 import gtk
@@ -30,11 +32,14 @@ class ScribberTextView(gtk.TextView):
 
         self.parent_window = parent_window
 
-        self.connect_after('key-press-event', self._on_key_event)
-        self.connect('key-release-event', self._on_key_event)
+        self.edit_region_width = 794
+
+        self.connect_after('key-press-event', self._on_key_pressed)
+        self.connect('key-release-event', self._on_key_released)
         self.connect_after('button-press-event', self._on_button_event)
         self.connect('button-release-event', self._on_button_event)
         self.connect('move-cursor', self._on_move_cursor)
+        self.connect('size-allocate', self._on_size_allocate)
 
         self.set_accepts_tab(True)
 
@@ -44,18 +49,16 @@ class ScribberTextView(gtk.TextView):
         self.image_window.set_default_size(200, 200)
         self.image_window.add(self.image_image)
 
-        font = pango.FontDescription("Deja Vu Sans Mono  11")
+        font = pango.FontDescription("Deja Vu Sans 11")
         self.modify_font(font)
 
         # Wrap mode
-        self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
+        #self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
+        self.set_wrap_mode(gtk.WRAP_WORD)
 
         # Paragraph spacing
         self.set_pixels_above_lines(3)
         self.set_pixels_below_lines(3)
-
-        self.set_right_margin(80)
-        self.set_left_margin(80)
 
         # Line spacing
         self.set_pixels_inside_wrap(5)
@@ -74,7 +77,6 @@ class ScribberTextView(gtk.TextView):
         except IOError:
             raise
 
-
     def toggle_focus_mode(self):
         if self.focus:
             self.focus = False
@@ -85,46 +87,86 @@ class ScribberTextView(gtk.TextView):
 
     def focus_current_sentence(self):
         """ Highlights the current sentence and scroll it to the middle of
-            the gtkTextView.
-        """
+            the gtkTextView. """
         if self.focus:
             self.get_buffer().focus_current_sentence()
+
+            # TODO The scrolling is really obtrusive because it is so hard,
+            # this can only work, if the scrolling was smooth.
+
             # Scroll cursor to middle of TextView
-            self.scroll_to_mark(self.get_buffer().get_insert(), 0.0, True,
-                0.0, 0.5)
+            #self.scroll_to_mark(self.get_buffer().get_insert(), 0.0, True,
+            #    0.0, 0.5)
+
+    def _on_key_pressed(self, widget, event, data=None):
+        keyname = gtk.gdk.keyval_name(event.keyval)
+        state = event.state
+
+        if state == gtk.gdk.CONTROL_MASK:  # CTRL
+            if keyname == 'd':
+                print 'DELETE ROW'
+        elif state == gtk.gdk.MOD1_MASK:  # Alt
+            if keyname == 'Up':
+                self.move_line_up()
+            elif keyname == 'Down':
+                print 'Move line down'
+
+        self.focus_current_sentence()
+        self.toggle_image_window()
+
+    def _on_key_released(self, widget, event, data=None):
+        self.focus_current_sentence()
+        self.toggle_image_window()
 
     def _on_move_cursor(self, widget, step_size, count, extend_selection,
                         data=None):
         self.focus_current_sentence()
         self.toggle_image_window()
 
-    def _on_key_event(self, widget, event, data=None):
+    def _on_button_event(self, widget, event, data=None):
+        """ Called on mouse click. """
         self.focus_current_sentence()
         self.toggle_image_window()
 
-    def _on_button_event(self, widget, event, data=None):
-        self.focus_current_sentence()
-        self.toggle_image_window()
+    def _on_size_allocate(self, widget, event, data=None):
+        """ Called when widget gets resized. This modifies the left/right
+        margin so that we have a fixed line width. """
+
+        x, y, width, height = self.get_allocation()
+        if width > self.edit_region_width:
+            margin = (width - self.edit_region_width) / 2
+            self.set_left_margin(margin)
+            self.set_right_margin(margin)
 
     def toggle_image_window(self):
+        """ Checks if current cursor position is an image. If so, it displays a
+        preview of that image."""
+
         tag_image = self.get_buffer().tags['image']
+        #pattern_image = MarkdownSyntaxHL.PATTERNS['image']
         cursor = self.get_buffer().get_cursor_iter()
         if cursor.has_tag(tag_image):
-            # TODO: Parse the filename correctly
+            # Parse the filename
             start = cursor.copy()
-            start.backward_to_tag_toggle(tag_image)
+            if not cursor.begins_tag(tag_image):
+                start.backward_to_tag_toggle(tag_image)
+
             end = cursor.copy()
-            end.forward_to_tag_toggle(tag_image)
+            if not cursor.ends_tag(tag_image):
+                end.forward_to_tag_toggle(tag_image)
 
             image_pattern = start.get_text(end)
+            print image_pattern
 
             self.show_image_window('system-search.png')
         else:
-            self.hide_image_window()
+            self.image_window.hide()
 
     def show_image_window(self, image):
-        if not self.image_window.get_visible():
+        """ Determines the current cursor position on the screen (x,y) and
+        displays the image preview."""
 
+        if not self.image_window.get_visible():
             self.image_image.set_from_file(image)
 
             window_x, window_y = self.parent_window.get_position()
@@ -137,8 +179,17 @@ class ScribberTextView(gtk.TextView):
                                    y + height + window_y + self_y)
             self.image_window.show_all()
 
-    def hide_image_window(self):
-        self.image_window.hide()
+    def move_line_up(self):
+        buffer = self.get_buffer()
+        end = buffer.get_cursor_iter()
+
+        self.emit('move-cursor', gtk.MOVEMENT_DISPLAY_LINE_ENDS, -1, False)
+        # cursor on start of line now
+        cursor = buffer.get_iter_at_mark(buffer.get_insert())
+
+        # TODO: end goes too far
+        end.forward_line()
+        buffer.select_range(cursor, end)
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
@@ -249,7 +300,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self._apply_tags = True
 
-        cursor= self.get_iter_at_mark(self.get_insert())
+        cursor = self.get_iter_at_mark(self.get_insert())
 
         start = self.get_start_iter()
         end = self.get_end_iter()
@@ -261,7 +312,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         if not cursor.ends_sentence():
             mend.forward_sentence_end()
 
-        self.remove_tag_by_name("blurr_out", start, end)
+        self.remove_tag_by_name("blurr_out", mstart, mend)
         self.apply_tag_by_name("blurr_out", start, mstart)
         self.apply_tag_by_name("blurr_out", mend, end)
 
@@ -271,8 +322,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         """ Removes all highlighting tags from buffer."""
         start = self.get_start_iter()
         end = self.get_end_iter()
-        self.remove_tag_by_name("default", start, end)
-        self.apply_tag_by_name("focus", start, end)
+        self.remove_tag_by_name("blurr_out", start, end)
 
 
 class ScribberFindBox(gtk.HBox):
@@ -453,7 +503,6 @@ class ScribberFadeHBox(gtk.Fixed):
         self.fading_widgets['foot'] = widget
 
     def add_main_widget(self, widget):
-        #widget.set_parent(self)
         self.main = widget
         self.add(self.main)
 
@@ -482,7 +531,10 @@ class ScribberFadeHBox(gtk.Fixed):
         self._resize_children()
 
     def fadeout(self):
-        """ Checks if we are currently fading in or out, if not, starts a timer
+        start_new_thread(self._fadeout, ())
+
+    def _fadeout(self):
+        """ Checks if we are currently fading, if not, starts a timer
             that calls a fadeout function until the widgets are completely
             faded out.
         """
@@ -494,27 +546,34 @@ class ScribberFadeHBox(gtk.Fixed):
                                 self.__fadeout_check_widget,
                                 ScribberFadeHBox.UP)
 
-            # TODO: gtk.main_iteration seems to block, though it shouldnt...
             while self.fading:
-#                # While widgets are still fading out, continue in gtk.mainloop
+                # While widgets are still fading out, continue in gtk.mainloop
                 gtk.main_iteration(False)
 
             for widget in self.fading_widgets.values():
                 widget.hide()
 
+            # TODO: gtk.main_iteration seems to block, though it shouldnt...
+#            while self.fading:
+#                # While widgets are still fading out, continue in gtk.mainloop
+#                gtk.main_iteration(False)
+
     def fadein(self):
-        """ Checks if we are currently fading in or out, if not, starts a timer
+        # TODO: Make sure this is called
+        if not self.fading_widgets['head'].get_visible() and not self.fading:
+            self.fading = True
+            start_new_thread(self._fadein, ())
+
+    def _fadein(self):
+        """ Checks if we are currently fading, if not, starts a timer
             that calls a fadein function until the widgets are completely
             faded in.
         """
-        # Make sure we only call this once
-        if not self.fading_widgets['head'].get_visible() and not self.fading:
-            self.fading = True
-            for widget in self.fading_widgets.values():
-                widget.show()
-            gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
-                                self.__fadein_check_widget,
-                                ScribberFadeHBox.DOWN)
+        for widget in self.fading_widgets.values():
+            widget.show()
+        gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
+                            self.__fadein_check_widget,
+                            ScribberFadeHBox.DOWN)
 
     def _fade(self, check_widget, offset):
         """ Fades the header and footer in the right direction. Returns True
