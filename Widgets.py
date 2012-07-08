@@ -14,6 +14,7 @@ Custom widgets used in Scribber.
 """
 
 from thread import start_new_thread
+from threading import Thread
 
 import collections
 import gobject
@@ -532,13 +533,12 @@ class ScribberFadeHBox(gtk.Fixed):
         self._resize_children()
 
     def fadeout(self):
-        start_new_thread(self._fadeout, ())
+        Thread(target=self._fadeout).start()
 
     def _fadeout(self):
         """ Checks if we are currently fading, if not, starts a timer
             that calls a fadeout function until the widgets are completely
-            faded out.
-        """
+            faded out.  """
         # Make sure we only call this once
         if (self.fading_widgets['head'].get_visible() and not self.fading):
 
@@ -554,16 +554,10 @@ class ScribberFadeHBox(gtk.Fixed):
             for widget in self.fading_widgets.values():
                 widget.hide()
 
-            # TODO: gtk.main_iteration seems to block, though it shouldnt...
-#            while self.fading:
-#                # While widgets are still fading out, continue in gtk.mainloop
-#                gtk.main_iteration(False)
-
     def fadein(self):
-        # TODO: Make sure this is called
         if not self.fading_widgets['head'].get_visible() and not self.fading:
             self.fading = True
-            start_new_thread(self._fadein, ())
+            self._fadein()
 
     def _fadein(self):
         """ Checks if we are currently fading, if not, starts a timer
