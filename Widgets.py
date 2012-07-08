@@ -13,9 +13,6 @@ Custom widgets used in Scribber.
     * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
 """
 
-from thread import start_new_thread
-from threading import Thread
-
 import collections
 import gobject
 import gtk
@@ -533,7 +530,7 @@ class ScribberFadeHBox(gtk.Fixed):
         self._resize_children()
 
     def fadeout(self):
-        Thread(target=self._fadeout).start()
+        self._fadeout()
 
     def _fadeout(self):
         """ Checks if we are currently fading, if not, starts a timer
@@ -541,15 +538,14 @@ class ScribberFadeHBox(gtk.Fixed):
             faded out.  """
         # Make sure we only call this once
         if (self.fading_widgets['head'].get_visible() and not self.fading):
-
             self.fading = True
+
             gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
                                 self.__fadeout_check_widget,
                                 ScribberFadeHBox.UP)
 
-            while self.fading:
-                # While widgets are still fading out, continue in gtk.mainloop
-                gtk.main_iteration(False)
+            while gtk.events_pending():
+                gtk.main_iteration_do(block=False)
 
             for widget in self.fading_widgets.values():
                 widget.hide()
@@ -566,6 +562,7 @@ class ScribberFadeHBox(gtk.Fixed):
         """
         for widget in self.fading_widgets.values():
             widget.show()
+
         gobject.timeout_add(ScribberFadeHBox.FADE_DELAY, self._fade,
                             self.__fadein_check_widget,
                             ScribberFadeHBox.DOWN)
