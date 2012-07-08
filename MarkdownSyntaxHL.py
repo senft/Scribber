@@ -34,50 +34,48 @@ class Pattern(object):
         else:
             self.end = None
 
-PATTERNS = {
-            # atx headers
-            'heading6_atx': Pattern('heading6', r"^(\#{6} ).*$",
-                flags=re.MULTILINE),
+PATTERNS = {'heading6_atx': Pattern('heading6', r"^(\#{6} ).*$",  # atx headers
+                                    flags=re.MULTILINE),
             'heading5_atx': Pattern('heading5', r"^(\#{5} ).*$",
-                flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
             'heading4_atx': Pattern('heading4', r"^(\#{4} ).*$",
-                flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
             'heading3_atx': Pattern('heading3', r"^(\#{3} ).*$",
-                flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
             'heading2_atx': Pattern('heading2', r"^(\#\# ).*$",
-                flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
             'heading1_atx': Pattern('heading1', r"^(\# ).*$",
-                flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
 
             # Setext headers
             'heading1_set': Pattern('heading1', r"^(.).+?\n(=+)$",
-                flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
             'heading2_set': Pattern('heading2', r"^(.).+?\n(-+)$",
-                    flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
 
             # tables
             'table_default': Pattern('table_default', r"^([+\-*] ).*?$",
-                flags=re.MULTILINE),
+                                     flags=re.MULTILINE),
             'table_sorted': Pattern('table_sorted', r"^(\d+\. ).*?$",
-                flags=re.MULTILINE),
+                                    flags=re.MULTILINE),
 
             'blockquote': Pattern('blockquote', r"^(> ).+?$",
-                flags=re.MULTILINE),
+                                  flags=re.MULTILINE),
 
             'image': Pattern('image', r"(\!\(.*\)\[(.+)\])"),
 
             # basic inline formatting
             # TODO \*** doesnt match as ** because ** must not be preceded by *
             'bolditalic': Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])",
-                     end=r"([^s\\]\*\*\*)"),
+                                  end=r"([^s\\]\*\*\*)"),
             'bold': Pattern('bold', r"(?<!\*)(\*\*[^s])",
-                end=r"([^s\\]\*\*)"),
+                            end=r"([^s\\]\*\*)"),
             'underlined': Pattern('underlined', r"((?<!\\)_[^s])",
-                end=r"([^s\\]_)"),
+                                  end=r"([^s\\]_)"),
             'italic': Pattern('italic', r"((?<!\*|\\)\*[^\s])",
-                end=r"([^\s\\]\*)"),
+                              end=r"([^\s\\]\*)"),
             'monospace': Pattern('monospace', r"(`[^\s])",
-                end=r"([^\s\\]`)"),
+                                 end=r"([^\s\\]`)"),
             }
 
 
@@ -99,48 +97,60 @@ class MarkdownSyntaxHL(object):
 
         # TODO: I might have to completely ditch, the margin for headings
         # (because It's just easier to only have accumulating margins)
-        self.tags['heading1'] = self.buffer.create_tag('heading1',
-            weight=pango.WEIGHT_BOLD, left_margin=-30,
-            accumulative_margin=True)
-        self.tags['heading2'] = self.buffer.create_tag('heading2',
-            weight=pango.WEIGHT_BOLD, left_margin=-40,
-            accumulative_margin=True)
-        self.tags['heading3'] = self.buffer.create_tag('heading3',
-            weight=pango.WEIGHT_BOLD, left_margin=-50,
-            accumulative_margin=True)
-        self.tags['heading4'] = self.buffer.create_tag('heading4',
-            weight=pango.WEIGHT_BOLD, left_margin=-60,
-            accumulative_margin=True)
-        self.tags['heading5'] = self.buffer.create_tag('heading5',
-            weight=pango.WEIGHT_BOLD, left_margin=-70,
-            accumulative_margin=True)
-        self.tags['heading6'] = self.buffer.create_tag('heading6',
-            weight=pango.WEIGHT_BOLD, left_margin=-80,
-            accumulative_margin=True)
+        self.tags['heading1'] = \
+            self.buffer.create_tag('heading1',
+                                   weight=pango.WEIGHT_BOLD,
+                                   left_margin=-30,
+                                   accumulative_margin=True)
+        self.tags['heading2'] = \
+            self.buffer.create_tag('heading2',
+                                   weight=pango.WEIGHT_BOLD, left_margin=-40,
+                                   accumulative_margin=True)
+        self.tags['heading3'] = \
+            self.buffer.create_tag('heading3',
+                                   weight=pango.WEIGHT_BOLD, left_margin=-50,
+                                   accumulative_margin=True)
+        self.tags['heading4'] = \
+            self.buffer.create_tag('heading4',
+                                   weight=pango.WEIGHT_BOLD, left_margin=-60,
+                                   accumulative_margin=True)
+        self.tags['heading5'] = \
+            self.buffer.create_tag('heading5',
+                                   weight=pango.WEIGHT_BOLD, left_margin=-70,
+                                   accumulative_margin=True)
+        self.tags['heading6'] = \
+            self.buffer.create_tag('heading6',
+                                   weight=pango.WEIGHT_BOLD, left_margin=-80,
+                                   accumulative_margin=True)
 
-        self.tags['table_default'] = self.buffer.create_tag('table_default',
-            left_margin=30, accumulative_margin=True)
-        self.tags['table_sorted'] = self.buffer.create_tag('table_sorted',
-            left_margin=30, accumulative_margin=True)
+        self.tags['table_default'] = \
+            self.buffer.create_tag('table_default', left_margin=30,
+                                   accumulative_margin=True)
+        self.tags['table_sorted'] = \
+            self.buffer.create_tag('table_sorted', left_margin=30,
+                                   accumulative_margin=True)
 
-        self.tags['blockquote'] = self.buffer.create_tag('blockquote',
-                              left_margin=30, accumulative_margin=True,
-                              style=pango.STYLE_ITALIC)
+        self.tags['blockquote'] = \
+            self.buffer.create_tag('blockquote', left_margin=30,
+                                   accumulative_margin=True,
+                                   style=pango.STYLE_ITALIC)
 
         self.tags['image'] = self.buffer.create_tag('image',
-                         style=pango.STYLE_ITALIC)
+                                                    style=pango.STYLE_ITALIC)
 
-        self.tags['underlined'] = self.buffer.create_tag('underlined',
-                              underline=pango.UNDERLINE_SINGLE)
+        self.tags['underlined'] = \
+            self.buffer.create_tag('underlined',
+                                   underline=pango.UNDERLINE_SINGLE)
         self.tags['bold'] = self.buffer.create_tag('bold',
-                        weight=pango.WEIGHT_BOLD)
+                                                   weight=pango.WEIGHT_BOLD)
         self.tags['italic'] = self.buffer.create_tag('italic',
-                                 style=pango.STYLE_ITALIC)
-        self.tags['bolditalic'] = self.buffer.create_tag('bolditalic',
-            weight=pango.WEIGHT_BOLD, style=pango.STYLE_ITALIC)
+                                                     style=pango.STYLE_ITALIC)
+        self.tags['bolditalic'] = \
+            self.buffer.create_tag('bolditalic', weight=pango.WEIGHT_BOLD,
+                                   style=pango.STYLE_ITALIC)
 
         self.tags['monospace'] = self.buffer.create_tag('monospace',
-                        family="monospace")
+                                                        family="monospace")
 
     def get_cursor_iter(self):
         """ Returns a gtk.TextIter pointing to the current cursor position."""
@@ -162,7 +172,7 @@ class MarkdownSyntaxHL(object):
 
         for pattern in self._get_markdown_patterns(start, end):
             self.buffer.apply_tag_by_name(pattern['tagn'], pattern['start'],
-                                   pattern['end'])
+                                          pattern['end'])
 
     def _get_markdown_patterns(self, start, end):
         """ Returns all found markdown patterns in this buffer."""
@@ -183,15 +193,16 @@ class MarkdownSyntaxHL(object):
             # Begin at the start of the region to search for every pattern
             search_start = start.copy()
 
-            while 1:
+            while True:
                 try:
-                    match = self._find_pattern(pattern,
-                            text[search_start.get_offset():end.get_offset()],
-                            search_start)
+                    search_in = \
+                        text[search_start.get_offset():end.get_offset()]
+                    match = self._find_pattern(pattern, search_in,
+                                               search_start)
 
                     # start or end already used?
                     if (match['start'].get_offset() in used_iters or
-                        match['end'].get_offset() in used_iters):
+                            match['end'].get_offset() in used_iters):
                         search_start.forward_chars(match['start_delimit'])
                         continue
 

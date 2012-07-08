@@ -153,14 +153,14 @@ class ScribberView(object):
                 not response == gtk.RESPONSE_DELETE_EVENT):
             if not filename:
                 # No filename passed, so show a open-dialog
-                dialog = gtk.FileChooserDialog(parent=self.win,
-                                               title='Open...',
-                                               action=
-                                                 gtk.FILE_CHOOSER_ACTION_OPEN,
-                                               buttons=(gtk.STOCK_CANCEL,
-                                                        gtk.RESPONSE_CANCEL,
-                                                        gtk.STOCK_OPEN,
-                                                        gtk.RESPONSE_OK))
+                dialog = \
+                    gtk.FileChooserDialog(parent=self.win,
+                                          title='Open...',
+                                          action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                                          buttons=(gtk.STOCK_CANCEL,
+                                                   gtk.RESPONSE_CANCEL,
+                                                   gtk.STOCK_OPEN,
+                                                   gtk.RESPONSE_OK))
                 response = dialog.run()
                 if response == gtk.RESPONSE_OK:
                     # A file has been selected
@@ -177,10 +177,12 @@ class ScribberView(object):
                     self.filename = filename
                     self.set_window_title()
                 except IOError as e:
-                    dialog = gtk.MessageDialog(parent=self.win,
-                                        message_format='Could not open file.',
-                                        buttons=gtk.BUTTONS_OK,
-                                        type=gtk.MESSAGE_ERROR)
+                    dialog = \
+                        gtk.MessageDialog(parent=self.win,
+                                          message_format='Could not open '
+                                                         'file.',
+                                          buttons=gtk.BUTTONS_OK,
+                                          type=gtk.MESSAGE_ERROR)
                     dialog.format_secondary_text(str(e))
                     dialog.connect("response", lambda d, r: d.destroy())
                     dialog.run()
@@ -258,9 +260,11 @@ class ScribberView(object):
     def show_ask_save_dialog(self):
         """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to. """
         dialog = gtk.MessageDialog(parent=self.win, flags=0,
-                 type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
-                 message_format='The document has been modified. Do you want '
-                                'to save your changes?')
+                                   type=gtk.MESSAGE_QUESTION,
+                                   buttons=gtk.BUTTONS_YES_NO,
+                                   message_format='The document has been '
+                                                  'modified. Do you want '
+                                                  'to save your changes?')
 
         dialog.add_button('Cancel', gtk.RESPONSE_CANCEL)
         response = dialog.run()
@@ -296,14 +300,14 @@ class ScribberView(object):
         savem = gtk.ImageMenuItem(gtk.STOCK_SAVE)
         key, mod = gtk.accelerator_parse("<Control>S")
         savem.add_accelerator('activate', agr, key,
-            mod, gtk.ACCEL_VISIBLE)
+                              mod, gtk.ACCEL_VISIBLE)
         savem.connect('activate', self._on_menu_click)
         filemenu.append(savem)
 
         saveasm = gtk.ImageMenuItem(gtk.STOCK_SAVE_AS)
         key, mod = gtk.accelerator_parse("<Control><Shift>S")
         saveasm.add_accelerator('activate', agr, key,
-            mod, gtk.ACCEL_VISIBLE)
+                                mod, gtk.ACCEL_VISIBLE)
         saveasm.connect('activate', self._on_menu_click)
         filemenu.append(saveasm)
 
@@ -327,13 +331,13 @@ class ScribberView(object):
         undom = gtk.ImageMenuItem(gtk.STOCK_UNDO, agr)
         key, mod = gtk.accelerator_parse("<Control>Z")
         undom.add_accelerator('activate', agr, key,
-            mod, gtk.ACCEL_VISIBLE)
+                              mod, gtk.ACCEL_VISIBLE)
         editmenu.append(undom)
 
         redom = gtk.ImageMenuItem(gtk.STOCK_REDO, agr)
         key, mod = gtk.accelerator_parse("<Control>Y")
         redom.add_accelerator('activate', agr, key,
-            mod, gtk.ACCEL_VISIBLE)
+                              mod, gtk.ACCEL_VISIBLE)
         editmenu.append(redom)
 
         editmenu.append(gtk.SeparatorMenuItem())
@@ -409,14 +413,14 @@ class ScribberView(object):
 
         # Buttons
         button_focus = gtk.ToggleButton("Focus")
-        button_focus.set_image(
-            gtk.image_new_from_file("icons/system-search.png"))
+        ico_focus = gtk.image_new_from_file("icons/system-search.png")
+        button_focus.set_image(ico_focus)
         button_focus.set_active(True)
         button_focus.connect("clicked", self._on_button_click)
 
         self.button_fullscreen = gtk.ToggleButton("Fullscreen")
-        self.button_fullscreen.set_image(
-           gtk.image_new_from_file("icons/view-fullscreen.png"))
+        ico_fullscreen = gtk.image_new_from_file("icons/view-fullscreen.png")
+        self.button_fullscreen.set_image(ico_fullscreen)
         self.button_fullscreen.connect("clicked", self._on_button_click)
 
         self.button_actions = {}

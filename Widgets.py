@@ -167,12 +167,12 @@ class ScribberTextView(gtk.TextView):
         displays the image preview."""
 
         if not self.image_window.get_visible():
+            buffer = self.get_buffer()
             self.image_image.set_from_file(image)
 
             window_x, window_y = self.parent_window.get_position()
             self_x, self_y, self_width, self_height = self.get_allocation()
-            cursor = self.get_buffer().get_iter_at_mark(
-                    self.get_buffer().get_insert())
+            cursor = buffer.get_iter_at_mark(buffer.get_insert())
             x, y, width, height = self.get_iter_location(cursor)
             x, y = self.buffer_to_window_coords(gtk.TEXT_WINDOW_WIDGET, x, y)
             self.image_window.move(x + width + window_x + self_x,
@@ -247,7 +247,8 @@ class ScribberTextBuffer(gtk.TextBuffer):
         # Now match from start to current cursor
         if not start and not end:
             matches_from_start = self._find_all_matches(pattern,
-                self.get_start_iter(), start)
+                                                        self.get_start_iter(),
+                                                        start)
 
             matches.extend(matches_from_start)
         return matches
@@ -275,7 +276,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
         """ Hilights all matches in buffer and selects the match next to
             current cursor position. """
         self.remove_tag_by_name('match', self.get_start_iter(),
-            self.get_end_iter())
+                                self.get_end_iter())
 
         matches = self._find_all_matches(pattern)
 
@@ -440,8 +441,8 @@ class ScribberFindReplaceBox(ScribberFindBox):
 
         start, end = self.matches[0]
         self.buffer.replace_pattern(self.txt_find.get_text(),
-            self.txt_replace.get_text(), start, end, self.chk_matchcase,
-                replace_all=False)
+                                    self.txt_replace.get_text(), start, end,
+                                    self.chk_matchcase, replace_all=False)
         # When we replaced pattern somewhere, jump to next occurence of
         # pattern
         self.hilight_search(self.txt_find.get_text())
@@ -512,20 +513,20 @@ class ScribberFadeHBox(gtk.Fixed):
         foot = self.fading_widgets['foot']
 
         head_x, head_y, head_width, head_height = head.get_allocation()
-
         foot_x, foot_y, foot_width, foot_height = foot.get_allocation()
 
-        self.main.size_allocate((0, head_height - head.offset,
-            fixed_width, fixed_height - head_height - foot_height +
-            head.offset + foot.offset))
+        new_main_y = head_height - head.offset
+        new_main_height = fixed_height - head_height - foot_height + \
+            head.offset + foot.offset
+
+        self.main.size_allocate((0, new_main_y, fixed_width, new_main_height))
 
         if head.get_visible():
-            head.size_allocate((0, 0 - head.offset, fixed_width,
-                head_height))
+            head.size_allocate((0, 0 - head.offset, fixed_width, head_height))
 
         if foot.get_visible():
-            foot.size_allocate((0, fixed_height - foot_height +
-                foot.offset, fixed_width, foot_height))
+            new_footer_y = fixed_height - foot_height + foot.offset
+            foot.size_allocate((0, new_footer_y, fixed_width, foot_height))
 
     def _on_size_allocate(self, widget, event, data=None):
         self._resize_children()
