@@ -1,7 +1,6 @@
 #Scribber
 
-**Scribber** is a simple text editor that focuses on minimalism. (Screenshot at
-the bottom)
+**Scribber** is a simple text editor that focuses on minimalism.
 
 # Features:
 
