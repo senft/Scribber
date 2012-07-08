@@ -11,10 +11,8 @@ import pygtk
 pygtk.require('2.0')
 import sys
 
-from MarkdownSyntaxHL import MarkdownSyntaxHL
 from Widgets import (ScribberFadeHBox, ScribberFindBox, ScribberFindReplaceBox,
                      ScribberTextBuffer, ScribberTextView)
-
 
 __author__ = 'Julian Wulfheide'
 __copyright__ = 'Copyright 2011, Julian Wulfheide'
@@ -35,7 +33,6 @@ class ScribberView(object):
         gtk.rc_parse(".gtkrc")
 
         self.buffer = ScribberTextBuffer()
-        self.syntax_hl = MarkdownSyntaxHL(self.buffer)
         self.view = ScribberTextView(self.win)
         self.view.set_buffer(self.buffer)
 

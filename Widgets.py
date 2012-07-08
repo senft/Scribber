@@ -5,12 +5,19 @@
 Custom widgets used in Scribber.
     * ScribberTextView is a gtk.TextView with some basic formatting and
       mechanisms to focus the current sentence
+
     * ScribberTextBuffer is the underlying gtk.TextBuffer. It has automatic
-      Markdown-Syntax-Hilighting and features simple hilighting for find and
+      Markdown-Syntax-Hilighting and features simple hilighting for search and
       replace
+
     * ScribberFindBox is a simple gtk.HBox containing the usual widgets
       used in a Find-Windget
+
     * ScribberFindReplaceBox is the same as ScribberFindBox for find/replace
+
+    * ScribberFadeHBox is a gtk.HBox that can hold 3 Widgets. A top-bar, and
+      widget and a bottom-bar. The top and bottom bar can, give their space to
+      the main widget with a nice sliding animation
 """
 
 import collections
@@ -20,6 +27,8 @@ import pango
 import pygtk
 pygtk.require('2.0')
 import re
+
+from MarkdownSyntaxHL import MarkdownSyntaxHL
 
 
 class ScribberTextView(gtk.TextView):
@@ -34,8 +43,8 @@ class ScribberTextView(gtk.TextView):
 
         self.connect_after('key-press-event', self._on_key_pressed)
         self.connect('key-release-event', self._on_key_released)
-        self.connect_after('button-press-event', self._on_button_event)
-        self.connect('button-release-event', self._on_button_event)
+        self.connect_after('button-press-event', self._on_click_event)
+        self.connect('button-release-event', self._on_click_event)
         self.connect('move-cursor', self._on_move_cursor)
         self.connect('size-allocate', self._on_size_allocate)
 
@@ -50,6 +59,10 @@ class ScribberTextView(gtk.TextView):
         font = pango.FontDescription("Deja Vu Sans 11")
         self.modify_font(font)
 
+        self.set_justification(gtk.JUSTIFY_FILL)
+
+        #self.set_indent(20)
+
         # Wrap mode
         #self.set_wrap_mode(gtk.WRAP_WORD_CHAR)
         self.set_wrap_mode(gtk.WRAP_WORD)
@@ -59,7 +72,7 @@ class ScribberTextView(gtk.TextView):
         self.set_pixels_below_lines(3)
 
         # Line spacing
-        self.set_pixels_inside_wrap(5)
+        self.set_pixels_inside_wrap(6)
 
     def open_file(self, filename):
         try:
@@ -100,14 +113,20 @@ class ScribberTextView(gtk.TextView):
         keyname = gtk.gdk.keyval_name(event.keyval)
         state = event.state
 
+        #cursor = self.get_buffer().get_cursor_iter()
+        #print cursor.get_line()
+
+        #(start, end) = self.get_buffer().get_selection_bounds()
+        #print (start.get_text(end))
+
         if state == gtk.gdk.CONTROL_MASK:  # CTRL
             if keyname == 'd':
-                print 'DELETE ROW'
+                self.delete_current_line()
         elif state == gtk.gdk.MOD1_MASK:  # Alt
             if keyname == 'Up':
                 self.move_line_up()
             elif keyname == 'Down':
-                print 'Move line down'
+                self.move_line_down()
 
         self.focus_current_sentence()
         self.toggle_image_window()
@@ -121,8 +140,7 @@ class ScribberTextView(gtk.TextView):
         self.focus_current_sentence()
         self.toggle_image_window()
 
-    def _on_button_event(self, widget, event, data=None):
-        """ Called on mouse click. """
+    def _on_click_event(self, widget, event, data=None):
         self.focus_current_sentence()
         self.toggle_image_window()
 
@@ -170,7 +188,7 @@ class ScribberTextView(gtk.TextView):
 
             window_x, window_y = self.parent_window.get_position()
             self_x, self_y, self_width, self_height = self.get_allocation()
-            cursor = buffer.get_iter_at_mark(buffer.get_insert())
+            cursor = buffer.get_cursor_iter()
             x, y, width, height = self.get_iter_location(cursor)
             x, y = self.buffer_to_window_coords(gtk.TEXT_WINDOW_WIDGET, x, y)
             self.image_window.move(x + width + window_x + self_x,
@@ -178,26 +196,77 @@ class ScribberTextView(gtk.TextView):
             self.image_window.show_all()
 
     def move_line_up(self):
+        # delete and buffer current line
+        text = self.delete_current_line()
+
         buffer = self.get_buffer()
-        end = buffer.get_cursor_iter()
+        cursor = buffer.get_cursor_iter()
+        # insert deletet text again
+        self.backward_display_line(cursor)
+        self.backward_display_line(cursor)
+        buffer.insert(cursor, '\n' + text)
 
-        self.emit('move-cursor', gtk.MOVEMENT_DISPLAY_LINE_ENDS, -1, False)
-        # cursor on start of line now
-        cursor = buffer.get_iter_at_mark(buffer.get_insert())
+        # and select the isertet text
+        buffer.select_range(*self._get_line_iters(cursor))
 
-        # TODO: end goes too far
-        end.forward_line()
-        buffer.select_range(cursor, end)
+    def move_line_down(self):
+        # delete and buffer current line
+        text = self.delete_current_line()
+
+        buffer = self.get_buffer()
+        cursor = buffer.get_cursor_iter()
+        # insert deletet text again
+        self.forward_display_line(cursor)
+        buffer.insert(cursor, text + '\n')
+
+        # and select the isertet text
+        self.backward_display_line(cursor)
+        buffer.select_range(*self._get_line_iters(cursor))
+
+    def delete_current_line(self):
+        buffer = self.get_buffer()
+        start, end = self._get_line_iters()
+
+        # Save deleted text
+        text = buffer.get_text(start, end)
+        buffer.delete(start, end)
+
+        cursor = buffer.get_cursor_iter()
+        # delete the empty line
+        buffer.backspace(cursor, False, True)
+        cursor.forward_line()
+        buffer.place_cursor(cursor)
+        return text
+
+    def _get_line_iters(self, iter=None):
+        """ Returns two iters, pointing at the start and the end of a
+        visual line.
+
+        Keyword arguments:
+        iter -- the iter of the line (if none is given, use the current line
+        """
+        if iter is None:
+            buffer = self.get_buffer()
+            start = buffer.get_cursor_iter()
+        else:
+            start = iter.copy()
+
+        end = start.copy()
+
+        self.backward_display_line_start(start)
+        self.forward_display_line_end(end)
+        return (start, end)
 
 
 class ScribberTextBuffer(gtk.TextBuffer):
-
     def __init__(self):
         gtk.TextBuffer.__init__(self)
         self.tags = {}
         self.tags['blurr_out'] = self.create_tag("blurr_out",
-                                                 foreground="#888888")
+                                                 foreground="#c0c0c0")
         self.tags['match'] = self.create_tag('match', background='#FFFF00')
+
+        self.syntax_hl = MarkdownSyntaxHL(self)
 
     def get_cursor_iter(self):
         return self.get_iter_at_mark(self.get_insert())
@@ -299,7 +368,7 @@ class ScribberTextBuffer(gtk.TextBuffer):
 
         self._apply_tags = True
 
-        cursor = self.get_iter_at_mark(self.get_insert())
+        cursor = self.get_cursor_iter()
 
         start = self.get_start_iter()
         end = self.get_end_iter()

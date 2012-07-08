@@ -98,30 +98,23 @@ class MarkdownSyntaxHL(object):
         # TODO: I might have to completely ditch, the margin for headings
         # (because It's just easier to only have accumulating margins)
         self.tags['heading1'] = \
-            self.buffer.create_tag('heading1',
-                                   weight=pango.WEIGHT_BOLD,
-                                   left_margin=-30,
-                                   accumulative_margin=True)
+            self.buffer.create_tag('heading1', weight=pango.WEIGHT_BOLD,
+                                   left_margin=-30, accumulative_margin=True)
         self.tags['heading2'] = \
-            self.buffer.create_tag('heading2',
-                                   weight=pango.WEIGHT_BOLD, left_margin=-40,
-                                   accumulative_margin=True)
+            self.buffer.create_tag('heading2', weight=pango.WEIGHT_BOLD,
+                                   left_margin=-40, accumulative_margin=True)
         self.tags['heading3'] = \
-            self.buffer.create_tag('heading3',
-                                   weight=pango.WEIGHT_BOLD, left_margin=-50,
-                                   accumulative_margin=True)
+            self.buffer.create_tag('heading3', weight=pango.WEIGHT_BOLD,
+                                   left_margin=-50, accumulative_margin=True)
         self.tags['heading4'] = \
-            self.buffer.create_tag('heading4',
-                                   weight=pango.WEIGHT_BOLD, left_margin=-60,
-                                   accumulative_margin=True)
+            self.buffer.create_tag('heading4', weight=pango.WEIGHT_BOLD,
+                                   left_margin=-60, accumulative_margin=True)
         self.tags['heading5'] = \
-            self.buffer.create_tag('heading5',
-                                   weight=pango.WEIGHT_BOLD, left_margin=-70,
-                                   accumulative_margin=True)
+            self.buffer.create_tag('heading5', weight=pango.WEIGHT_BOLD,
+                                   left_margin=-70, accumulative_margin=True)
         self.tags['heading6'] = \
-            self.buffer.create_tag('heading6',
-                                   weight=pango.WEIGHT_BOLD, left_margin=-80,
-                                   accumulative_margin=True)
+            self.buffer.create_tag('heading6', weight=pango.WEIGHT_BOLD,
+                                   left_margin=-80, accumulative_margin=True)
 
         self.tags['table_default'] = \
             self.buffer.create_tag('table_default', left_margin=30,
