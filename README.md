@@ -8,6 +8,11 @@
 * Markdown syntax highlighting
 * Minimalistic UI that lets you focus on writing your text
 
+# Dependencies:
+
+* GTK
+* Pango
+
 # TODO:
 
 * Optimize syntax highlighting (gets very slow on large texts)

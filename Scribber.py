@@ -57,7 +57,7 @@ class ScribberView(object):
         self.buffer.connect('modified-changed',
                             self._on_buffer_modified_change)
 
-        # To hide and show the bars
+        # To hide and show the bars (menu and statusbar)
         self.buffer.connect("insert-text", self._on_buffer_changed)
         self.buffer.connect("delete-range", self._on_buffer_changed)
 
