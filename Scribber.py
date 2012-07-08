@@ -249,15 +249,13 @@ class ScribberView(object):
 
     def show_help(self):
         """ Start a not-editable Scribber instance showing a help document. """
-        import pdb; pdb.set_trace()
         help_win = ScribberView()
         help_win.open('help.txt')
         help_win.view.set_editable(False)
         help_win.run()
 
     def show_ask_save_dialog(self):
-        """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to
-            save."""
+        """ Pops up a "Quit w/o saving"-Dialog and saves if user wants to. """
         dialog = gtk.MessageDialog(parent=self.win, flags=0,
                  type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
                  message_format='The document has been modified. Do you want '
