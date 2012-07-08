@@ -10,7 +10,8 @@ class NoPatternFound(Exception):
 
 
 class Pattern(object):
-    """ Represents one markdown-pattern."""
+    """ Represents a markdown-pattern."""
+
     def __init__(self, tagn, start, end=None, flags=0):
         """ Keyword arguments:
         tagn -- the tagname of the tag that should be applied to the
@@ -47,6 +48,7 @@ PATTERNS = {
                 flags=re.MULTILINE),
             'heading1_atx': Pattern('heading1', r"^(\# ).*$",
                 flags=re.MULTILINE),
+
             # Setext headers
             'heading1_set': Pattern('heading1', r"^(.).+?\n(=+)$",
                 flags=re.MULTILINE),

@@ -4,9 +4,6 @@
 """
 Scribber, a simple text editor that focuses on minimalism. It has basic
 text editor features, Markdown-Syntax-Hilighting, Export to PDF/ODT.
-
-Some icons provided by the Tango Desktop Project
-(http://tango.freedesktop.org/)
 """
 
 import gtk
@@ -52,14 +49,13 @@ class ScribberView(object):
 
         # Callbacks
         self.win.connect('delete_event', self._delete_event)
-        self.win.connect('destroy', self.destroy)
         self.win.connect('window-state-event', self._on_window_state_event)
         self.win.connect('size-request', self._on_window_resize)
         self.win.connect('motion-notify-event', self._on_mouse_motion)
 
         # To keep track of wether the document is modified or not.
         self.buffer.connect('modified-changed',
-            self._on_buffer_modified_change)
+                            self._on_buffer_modified_change)
 
         # To hide and show the bars
         self.buffer.connect("insert-text", self._on_buffer_changed)
@@ -112,7 +108,7 @@ class ScribberView(object):
         else:
             # Filename is know
             text = self.buffer.get_start_iter().get_text(
-            self.buffer.get_end_iter())
+                self.buffer.get_end_iter())
             try:
                 with open(self.filename, 'w+') as f:
                     f.write(text)
@@ -131,9 +127,10 @@ class ScribberView(object):
         success = False
 
         dialog = gtk.FileChooserDialog(parent=self.win, title='Save...',
-                 action=gtk.FILE_CHOOSER_ACTION_SAVE,
-                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                 gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+                                       action=gtk.FILE_CHOOSER_ACTION_SAVE,
+                                       buttons=(gtk.STOCK_CANCEL,
+                                                gtk.RESPONSE_CANCEL,
+                                       gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
         response = dialog.run()
 
@@ -152,14 +149,18 @@ class ScribberView(object):
             response = self.show_ask_save_dialog()
 
         # If save-dialog has been canceled, cancel open, too
-        if (not response == gtk.RESPONSE_CANCEL or 
-            not response == gtk.RESPONSE_DELETE_EVENT):
+        if (not response == gtk.RESPONSE_CANCEL or
+                not response == gtk.RESPONSE_DELETE_EVENT):
             if not filename:
                 # No filename passed, so show a open-dialog
                 dialog = gtk.FileChooserDialog(parent=self.win,
-                         title='Open...', action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                         buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-                         gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+                                               title='Open...',
+                                               action=
+                                                 gtk.FILE_CHOOSER_ACTION_OPEN,
+                                               buttons=(gtk.STOCK_CANCEL,
+                                                        gtk.RESPONSE_CANCEL,
+                                                        gtk.STOCK_OPEN,
+                                                        gtk.RESPONSE_OK))
                 response = dialog.run()
                 if response == gtk.RESPONSE_OK:
                     # A file has been selected
@@ -388,7 +389,7 @@ class ScribberView(object):
         self.menu_actions[saveasm] = self.save_as
         self.menu_actions[exportm] = None
         self.menu_actions[openm] = self.open
-        self.menu_actions[quitm] = new_instance
+        self.menu_actions[quitm] = self.quit
 
         self.menu_actions[copym] = self.copy
         self.menu_actions[cutm] = self.cut
@@ -507,12 +508,15 @@ class ScribberView(object):
         if self.buffer.get_modified():
             response = self.show_ask_save_dialog()
 
-        # When this returns True (when the Safe-Dialog was canceled) we dont
-        # quit
-        return response == gtk.RESPONSE_CANCEL
+        # When this returns True (it means the Safe-Dialog was canceled) we
+        # dont quit
+        result = response == gtk.RESPONSE_CANCEL
+        if not result:
+            gtk.main_quit()
+        return result
 
-    def destroy(self, widget, data=None):
-        gtk.main_quit()
+    def quit(self):
+        self.win.emit("delete-event", gtk.gdk.Event(gtk.gdk.DELETE))
 
 
 def new_instance():
@@ -520,7 +524,7 @@ def new_instance():
     new.run()
 
 
-def main(): 
+def main():
     if len(sys.argv) > 1:
         # TODO Make some real arg parsing here
         INST = ScribberView()
