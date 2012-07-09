@@ -109,9 +109,15 @@ class ScribberView(object):
             try:
                 with open(self.filename, 'w+') as f:
                     f.write(text)
-            except IOError:
-                # TODO: DO SOMETHING!
-                pass
+            except IOError as ioe:
+                dialog = \
+                    gtk.MessageDialog(parent=self.win,
+                                      message_format='Could write to file.',
+                                      buttons=gtk.BUTTONS_OK,
+                                      type=gtk.MESSAGE_ERROR)
+                dialog.format_secondary_text(str(ioe))
+                dialog.connect("response", lambda d, r: d.destroy())
+                dialog.run()
 
         # Not if IOError was raised
         self.buffer.set_modified(False)
@@ -252,6 +258,7 @@ class ScribberView(object):
         help_win = ScribberView()
         help_win.open('help.txt')
         help_win.view.set_editable(False)
+        help_win.focus()
         help_win.run()
 
     def show_ask_save_dialog(self):
