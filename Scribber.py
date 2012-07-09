@@ -7,6 +7,7 @@ text editor features, Markdown-Syntax-Hilighting, Export to PDF/ODT.
 """
 
 import gtk
+import logging
 import pygtk
 pygtk.require('2.0')
 import sys
@@ -25,6 +26,9 @@ __status__ = 'Development'
 
 
 class ScribberGUI(object):
+
+    log = logging.getLogger('log')
+
     def __init__(self):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
         self.win.set_title('Untitled* - Scribber')
@@ -87,6 +91,8 @@ class ScribberGUI(object):
         self.win.add(self.fade_box)
         self.win.resize(600, 600)
 
+        self.log.info('GUI initialized')
+
     def run(self):
         """ Show Scribber instance. """
         self.win.show_all()
@@ -110,18 +116,19 @@ class ScribberGUI(object):
                 with open(self.filename, 'w+') as f:
                     f.write(text)
                 self.buffer.set_modified(False)
+                self.log.info('File saved to ' + self.filename)
 
             except IOError as ioe:
+                self.log.error('Could not write to file.' + str(ioe))
                 dialog = \
                     gtk.MessageDialog(parent=self.win,
-                                      message_format='Could write to file.',
+                                      message_format='Could not write to '
+                                                     'file.',
                                       buttons=gtk.BUTTONS_OK,
                                       type=gtk.MESSAGE_ERROR)
                 dialog.format_secondary_text(str(ioe))
                 dialog.connect("response", lambda d, r: d.destroy())
                 dialog.run()
-
-
 
         # If we saved above, self.get_modified() should be false now, so the
         # save was successfull
@@ -182,6 +189,7 @@ class ScribberGUI(object):
                     self.filename = filename
                     self.set_window_title()
                 except IOError as ioe:
+                    self.log.error('Could not open file.' + str(ioe))
                     dialog = \
                         gtk.MessageDialog(parent=self.win,
                                           message_format='Could not open '
@@ -249,8 +257,10 @@ class ScribberGUI(object):
         dialog.set_name('Scribber')
         dialog.set_version(__version__)
         dialog.set_copyright(__copyright__)
+
         with open('LICENSE', 'r') as fhandle:
             license = fhandle.read()
+
         dialog.set_license(license)
         dialog.set_comments("Scribber is a simple text editor.")
         dialog.set_website("website")
@@ -485,14 +495,10 @@ class ScribberGUI(object):
             self.button_actions[widget]()
 
     def _on_mouse_motion(self, widget, event, data=None):
-        # TODO Toggling decoration is a hard "break"
-        #self.win.set_decorated(True)
         self.fade_box.fadein()
 
     def _on_buffer_changed(self, buffer, iter, text, length=None):
         self.fade_box.fadeout()
-
-        self.win.set_decorated(True)
 
     def _on_buffer_modified_change(self, widget, data=None):
         """ Called when the TextBuffer of our TextView gets modified.
@@ -508,7 +514,7 @@ class ScribberGUI(object):
         if event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN:
             self.button_fullscreen.set_active(True)
             self.is_fullscreen = True
-        else:
+        elif event.new_window_state == 0:  # fullscreen has been removed
             self.button_fullscreen.set_active(False)
             self.is_fullscreen = False
 
@@ -516,6 +522,7 @@ class ScribberGUI(object):
         self.view.focus_current_sentence()
 
     def _delete_event(self, widget, event, data=None):
+        self.log.info('Caught delete event on main window')
         response = None
         if self.buffer.get_modified():
             response = self.show_ask_save_dialog()
@@ -536,7 +543,21 @@ def new_instance():
     new.run()
 
 
+def init_logger(level):
+    console = logging.StreamHandler(sys.stdout)
+    frm = logging.Formatter("%(asctime)s %(levelname)-8s  %(message)s",
+                            "%d.%m.%Y %H:%M:%S")
+    console.setFormatter(frm)
+
+    log = logging.getLogger('log')
+
+    log.addHandler(console)  # if console logging
+    log.setLevel(level)
+
+
 def main():
+    init_logger(logging.DEBUG)
+
     if len(sys.argv) > 1:
         # TODO Make some real arg parsing here
         INST = ScribberGUI()

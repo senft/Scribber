@@ -113,14 +113,10 @@ class ScribberTextView(gtk.TextView):
             #    0.0, 0.5)
 
     def _on_key_pressed(self, widget, event, data=None):
+        # TODO These are not working on my desktop PC, though they are on my
+        # laptop (same setup...)
         keyname = gtk.gdk.keyval_name(event.keyval)
         state = event.state
-
-        #cursor = self.get_buffer().get_cursor_iter()
-        #print cursor.get_line()
-
-        #(start, end) = self.get_buffer().get_selection_bounds()
-        #print (start.get_text(end))
 
         if state == gtk.gdk.CONTROL_MASK:  # CTRL
             if keyname == 'd':
