@@ -18,8 +18,8 @@ class Pattern(object):
                 matched pattern
         start -- the start pattern of the whole pattern (group 0 of this
                  pattern has to be the part of the match we want to skip before
-                 continung searching. In a basic inline pattern this is usually
-                 the pattern delimiter. In a pattern where wo dont expect
+                 continue searching. In a basic inline pattern this is usually
+                 the pattern delimiter. In a patterns where we dont expect
                  nested patterns, it can be the whole pattern.
         end -- if you want to match a specific end, independently from your
                start, define the pattern here
@@ -31,50 +31,48 @@ class Pattern(object):
         self.end = end
         if end:
             self.end = re.compile(end, flags)
-        else:
-            self.end = None
 
-PATTERNS = {'heading6_atx': Pattern('heading6', r"^(\#{6} ).*$",  # atx headers
+PATTERNS = {'heading6_atx': Pattern('heading6', start=r"^(\#{6} ).*$",  # atx
                                     flags=re.MULTILINE),
-            'heading5_atx': Pattern('heading5', r"^(\#{5} ).*$",
+            'heading5_atx': Pattern('heading5', start=r"^(\#{5} ).*$",
                                     flags=re.MULTILINE),
-            'heading4_atx': Pattern('heading4', r"^(\#{4} ).*$",
+            'heading4_atx': Pattern('heading4', start=r"^(\#{4} ).*$",
                                     flags=re.MULTILINE),
-            'heading3_atx': Pattern('heading3', r"^(\#{3} ).*$",
+            'heading3_atx': Pattern('heading3', start=r"^(\#{3} ).*$",
                                     flags=re.MULTILINE),
-            'heading2_atx': Pattern('heading2', r"^(\#\# ).*$",
+            'heading2_atx': Pattern('heading2', start=r"^(\#\# ).*$",
                                     flags=re.MULTILINE),
-            'heading1_atx': Pattern('heading1', r"^(\# ).*$",
+            'heading1_atx': Pattern('heading1', start=r"^(\# ).*$",
                                     flags=re.MULTILINE),
 
             # Setext headers
-            'heading1_set': Pattern('heading1', r"^(.).+?\n(=+)$",
+            'heading1_set': Pattern('heading1', start=r"^(.).+?\n(=+)$",
                                     flags=re.MULTILINE),
-            'heading2_set': Pattern('heading2', r"^(.).+?\n(-+)$",
+            'heading2_set': Pattern('heading2', start=r"^(.).+?\n(-+)$",
                                     flags=re.MULTILINE),
 
             # tables
-            'table_default': Pattern('table_default', r"^([+\-*] ).*?$",
+            'table_default': Pattern('table_default', start=r"^([+\-*] ).*?$",
                                      flags=re.MULTILINE),
-            'table_sorted': Pattern('table_sorted', r"^(\d+\. ).*?$",
+            'table_sorted': Pattern('table_sorted', start=r"^(\d+\. ).*?$",
                                     flags=re.MULTILINE),
 
-            'blockquote': Pattern('blockquote', r"^(> ).+?$",
+            'blockquote': Pattern('blockquote', start=r"^(> ).+?$",
                                   flags=re.MULTILINE),
 
-            'image': Pattern('image', r"(\!\(.*\)\[(.+)\])"),
+            'image': Pattern('image', start=r"(\!\(.*\)\[(.+)\])"),
 
             # basic inline formatting
             # TODO \*** doesnt match as ** because ** must not be preceded by *
-            'bolditalic': Pattern('bolditalic', r"((?<!\\)\*\*\*[^s])",
+            'bolditalic': Pattern('bolditalic', start=r"((?<!\\)\*\*\*[^s])",
                                   end=r"([^s\\]\*\*\*)"),
-            'bold': Pattern('bold', r"(?<!\*)(\*\*[^s])",
+            'bold': Pattern('bold', start=r"(?<!\*)(\*\*[^s])",
                             end=r"([^s\\]\*\*)"),
-            'underlined': Pattern('underlined', r"((?<!\\)_[^s])",
+            'underlined': Pattern('underlined', start=r"((?<!\\)_[^s])",
                                   end=r"([^s\\]_)"),
-            'italic': Pattern('italic', r"((?<!\*|\\)\*[^\s])",
+            'italic': Pattern('italic', start=r"((?<!\*|\\)\*[^\s])",
                               end=r"([^\s\\]\*)"),
-            'monospace': Pattern('monospace', r"(`[^\s])",
+            'monospace': Pattern('monospace', start=r"(`[^\s])",
                                  end=r"([^\s\\]`)"),
             }
 
