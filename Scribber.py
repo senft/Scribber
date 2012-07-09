@@ -24,10 +24,10 @@ __email__ = 'ju.wulfheide@gmail.com'
 __status__ = 'Development'
 
 
-class ScribberView(object):
+class ScribberGUI(object):
     def __init__(self):
         self.win = gtk.Window(gtk.WINDOW_TOPLEVEL)
-        self.win.set_title('Untitled - Scribber')
+        self.win.set_title('Untitled* - Scribber')
 
         # Parse own .gtkrc for colored cursor
         gtk.rc_parse(".gtkrc")
@@ -71,13 +71,10 @@ class ScribberView(object):
         self.fix_find_replace = gtk.Fixed()
         self.fix_find_replace.add(self.find_replace_box)
 
-        main_vbox = gtk.VBox(False, 2)
-        # Chill.. otherwise, fade_box calls on_size_allocate infinitly
-        main_vbox.set_resize_mode(gtk.RESIZE_QUEUE)
-
         self.menu_bar = self.create_menu_bar()
         self.status_bar = self.create_status_bar()
 
+        main_vbox = gtk.VBox(False, 2)
         main_vbox.pack_start(scrolled_window, True, True, 0)
         main_vbox.pack_end(self.fix_find, False, False, 0)
         main_vbox.pack_end(self.fix_find_replace, False, False, 0)
@@ -98,8 +95,11 @@ class ScribberView(object):
         gtk.main()
 
     def save(self):
+        """ If the current file was previously saved, it just writes all
+        changes to the same file. If it never was saved before, call
+        save_as(). """
         if not self.filename:
-            # Never saved before (no filename known) -> show SaveAs dialog
+            # Never saved before (no filename known) -> show saveAs dialog
             if self.save_as():
                 self.buffer.set_modified(False)
         else:
@@ -109,6 +109,8 @@ class ScribberView(object):
             try:
                 with open(self.filename, 'w+') as f:
                     f.write(text)
+                self.buffer.set_modified(False)
+
             except IOError as ioe:
                 dialog = \
                     gtk.MessageDialog(parent=self.win,
@@ -119,16 +121,16 @@ class ScribberView(object):
                 dialog.connect("response", lambda d, r: d.destroy())
                 dialog.run()
 
-        # Not if IOError was raised
-        self.buffer.set_modified(False)
 
-        # If we saved in one of the branches above, get_modified should be
-        # false now,so the save was successfull
+
+        # If we saved above, self.get_modified() should be false now, so the
+        # save was successfull
         return not self.buffer.get_modified()
 
     def save_as(self):
+        """ Shows a FileChooserDialog and if the user selected a file saves to
+        it (returns True if a file was written). """
         success = False
-
         dialog = gtk.FileChooserDialog(parent=self.win, title='Save...',
                                        action=gtk.FILE_CHOOSER_ACTION_SAVE,
                                        buttons=(gtk.STOCK_CANCEL,
@@ -179,14 +181,14 @@ class ScribberView(object):
                     self.view.open_file(filename)
                     self.filename = filename
                     self.set_window_title()
-                except IOError as e:
+                except IOError as ioe:
                     dialog = \
                         gtk.MessageDialog(parent=self.win,
                                           message_format='Could not open '
                                                          'file.',
                                           buttons=gtk.BUTTONS_OK,
                                           type=gtk.MESSAGE_ERROR)
-                    dialog.format_secondary_text(str(e))
+                    dialog.format_secondary_text(str(ioe))
                     dialog.connect("response", lambda d, r: d.destroy())
                     dialog.run()
 
@@ -247,7 +249,9 @@ class ScribberView(object):
         dialog.set_name('Scribber')
         dialog.set_version(__version__)
         dialog.set_copyright(__copyright__)
-        dialog.set_license(__license__)
+        with open('LICENSE', 'r') as fhandle:
+            license = fhandle.read()
+        dialog.set_license(license)
         dialog.set_comments("Scribber is a simple text editor.")
         dialog.set_website("website")
         dialog.connect("response", lambda d, r: d.destroy())
@@ -255,7 +259,7 @@ class ScribberView(object):
 
     def show_help(self):
         """ Start a not-editable Scribber instance showing a help document. """
-        help_win = ScribberView()
+        help_win = ScribberGUI()
         help_win.open('help.txt')
         help_win.view.set_editable(False)
         help_win.focus()
@@ -528,17 +532,17 @@ class ScribberView(object):
 
 
 def new_instance():
-    new = ScribberView()
+    new = ScribberGUI()
     new.run()
 
 
 def main():
     if len(sys.argv) > 1:
         # TODO Make some real arg parsing here
-        INST = ScribberView()
+        INST = ScribberGUI()
         INST.open(sys.argv[1])
     else:
-        INST = ScribberView()
+        INST = ScribberGUI()
 
     INST.run()
 
