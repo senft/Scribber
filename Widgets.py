@@ -20,6 +20,8 @@ Custom widgets used in Scribber.
       the main widget with a nice sliding animation
 """
 
+from thread import start_new_thread
+
 import collections
 import gobject
 import gtk
@@ -41,6 +43,8 @@ class ScribberTextView(gtk.TextView):
 
         self.edit_region_width = 794
 
+        self.set_resize_mode(gtk.RESIZE_PARENT)
+
         self.connect_after('key-press-event', self._on_key_pressed)
         self.connect('key-release-event', self._on_key_released)
         self.connect_after('button-press-event', self._on_click_event)
@@ -53,7 +57,6 @@ class ScribberTextView(gtk.TextView):
         self.image_window = gtk.Window(gtk.WINDOW_POPUP)
         self.image_image = gtk.Image()
         self.image_window.set_decorated(False)
-        self.image_window.set_default_size(200, 200)
         self.image_window.add(self.image_image)
 
         font = pango.FontDescription("Deja Vu Sans 11")
