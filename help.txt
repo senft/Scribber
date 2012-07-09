@@ -1,6 +1,10 @@
 What is Scribber?
 ============
-Scribber is a simple, lightweigt **text editor** that tries not to keep you from writing your important texts. Scribber does not distract you, but makes you **focus on writing**, plain writing. No tweaking the spacing here, or changing the font size there.
+
+Scribber is a simple, lightweigt **text editor** that tries not to keep you
+from writing your important texts. Scribber does not distract you, but makes
+you **focus on writing**, plain writing. No tweaking the spacing here, or
+changing the font size there.
 
 Focus Mode
 ----------------
@@ -8,7 +12,12 @@ Balbalbl
 
 Markdown Highlighting
 -----------------------------
-Scribber uses a slightly modified version of Markdown. Since Markdown is targeted on creating HTML-Code for Content-Managment-Systems it's not what we want in Scribber. For example we don't need hyperlinks or horizontal lines, but on the other hand we *do* need footnotes and tables. So what do we have in Scribber?
+
+Scribber uses a slightly modified version of Markdown. Since Markdown is
+targeted on creating HTML-Code for Content-Managment-Systems it's not what we
+want in Scribber. For example we don't need hyperlinks or horizontal lines, but
+on the other hand we *do* need footnotes and tables. So what do we have in
+Scribber?
 
 ### Basic decoration
 *italic*, **bold**, _underline_, ***bolditalic***
@@ -16,8 +25,8 @@ Scribber uses a slightly modified version of Markdown. Since Markdown is targete
 ### Lists
 ##### Unsorted lists
 * This list is unsorted
-* This is the second item. Lists can automatically be wrapped. Scribber doesn't care if the line is too long. No need for you to wrap the lines by yourself. But if you want to you can and indent the next line.
-* This is a nice list.
+
+* This is a nice list.* This is the second item. Lists can automatically be wrapped. Scribber doesn't care if the line is too long. No need for you to wrap the lines by yourself.  But if you want to you can indent the lines.
 
 #### Sorted lists
 1. This list is sorted.
