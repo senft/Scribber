@@ -22,3 +22,7 @@
   overview of all headings and their hierachy
 
 Some icons provided by the Tango Desktop Project (http://tango.freedesktop.org/)
+
+# Screenshots:
+
+![](https://github.com/senft/Scribber/tree/master/screenshots/screenshot1.jpg)
