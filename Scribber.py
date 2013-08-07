@@ -15,13 +15,10 @@ import sys
 from Widgets import (ScribberFadeHBox, ScribberFindBox, ScribberFindReplaceBox,
                      ScribberTextBuffer, ScribberTextView)
 
-__author__ = 'Julian Wulfheide'
 __copyright__ = 'Copyright 2011, Julian Wulfheide'
-__credits__ = ['Julian Wulfheide', ]
 __license__ = 'MIT'
-__maintainer__ = 'Julian Wulfheide'
 __version__ = 'dev'
-__email__ = 'ju.wulfheide@gmail.com'
+__email__ = 'senftt@gmail.com'
 __status__ = 'Development'
 
 
