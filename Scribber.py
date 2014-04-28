@@ -15,7 +15,7 @@ import sys
 from Widgets import (ScribberFadeHBox, ScribberFindBox, ScribberFindReplaceBox,
                      ScribberTextBuffer, ScribberTextView)
 
-__copyright__ = 'Copyright 2011, Julian Wulfheide'
+__copyright__ = 'Copyright 2011, senft'
 __license__ = 'MIT'
 __version__ = 'dev'
 __email__ = 'senftt@gmail.com'
